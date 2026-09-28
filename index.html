@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="A clickable pilot prototype for Calgary community space booking." />
-    <title>Gather — Community spaces, made simple</title>
+    <meta name="description" content="A clickable Instant Book prototype for short-term rentable spaces and space operators in Calgary." />
+    <title>Gather — Book spaces in Calgary</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260928e" />
   </head>
   <body>
     <div class="app-shell">
@@ -18,9 +18,9 @@
           <span>gather</span>
         </button>
         <nav class="main-nav" aria-label="Primary navigation">
-          <button data-route="explore">Find a space</button>
-          <button data-route="host">For community spaces</button>
-          <button data-route="dashboard">Volunteer dashboard</button>
+          <button data-route="explore">Browse spaces</button>
+          <button data-route="host">For space operators</button>
+          <button data-route="dashboard">Venue dashboard</button>
         </nav>
         <div class="header-actions">
           <button class="text-button" data-route="dashboard">Sign in</button>
@@ -29,20 +29,25 @@
         <button class="mobile-menu" aria-label="Open menu" aria-expanded="false">☰</button>
       </header>
 
+      <div class="prototype-banner" role="note">
+        <strong>Interactive prototype</strong>
+        <span>Sample listings, availability, pricing, and payments—no real booking or charge is created.</span>
+      </div>
+
       <main id="app" tabindex="-1"></main>
 
       <footer class="site-footer">
         <div>
           <div class="brand footer-brand"><span class="brand-mark"><span></span><span></span><span></span></span><span>gather</span></div>
-          <p>Community space booking without the phone tag.</p>
+          <p>Available spaces. Upfront pricing. Instant confirmation.</p>
         </div>
-        <div class="footer-links"><button data-route="explore">Browse spaces</button><button data-route="host">List a venue</button><button data-route="dashboard">Pilot dashboard</button></div>
-        <p class="pilot-note">Pilot concept · Calgary, Alberta</p>
+        <div class="footer-links"><button data-route="explore">Browse spaces</button><button data-route="host">List your space</button><button data-route="dashboard">Venue dashboard</button></div>
+        <p class="pilot-note">Interactive prototype · Calgary, Alberta</p>
       </footer>
     </div>
 
     <div class="toast" role="status" aria-live="polite"></div>
 
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20260928e"></script>
   </body>
 </html>
