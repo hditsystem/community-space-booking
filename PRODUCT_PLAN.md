@@ -218,37 +218,52 @@ If the deposit is scheduled for later, it must not be included in **Total due to
 - Treat **refund initiated** and **refunded** as different states; keep the case open until the provider confirms the money movement.
 - If no deposit is required, do not create payment, inspection, or release tasks for it.
 
-## Revised users
+## Identity, accounts, memberships, and access
 
-### Community association administrator — initial host persona
+Gather has four primary **account contexts**. An account context identifies the party on whose behalf a person is acting; a permission role determines what that person may do in that context.
 
-- Publishes the association’s halls, rooms, kitchens, rinks, courts, and other spaces.
-- May be a manager, booking coordinator, board member, or other association team member; permissions are based on the operational role rather than employment status.
-- Needs a simple path from availability and booking through inspection and security-deposit release.
+| Account context | Purpose | Representative prototype roles |
+|---|---|---|
+| Customer account | Search, book, pay, receive documents, manage the booking, and respond to post-event matters | **Organizer / booking owner** |
+| Space-operator organization | Publish and operate one or more rentable spaces and manage the venue-side booking lifecycle | **Owner / account administrator**, **booking manager**, **operations / inspection staff**, **finance and settlement**, **board / auditor — read only** |
+| Event-service vendor | Publish and fulfil independent services and manage supplier documents and settlement | **Vendor owner / administrator**, **order / fulfilment staff**, **vendor finance** |
+| Gather platform team | Operate the marketplace, administer access and commercial policy, support participants, and reconcile platform activity | **Platform administrator**, **marketplace operations / support**, **platform finance / reconciliation** |
 
-### Venue owner or general manager
+These are twelve representative roles for workflow and permission testing, not twelve permanent identity types. A person has one identity and may hold multiple organization memberships—for example, someone may book a family event as a customer, manage one association as a booking manager, and serve as a read-only board member in another organization. Each membership records the tenant, role, status, and effective permissions. The user selects an **active context** before entering a private workspace, and every private action is evaluated against that active membership. Switching context must not merge data, permissions, or financial records across organizations.
 
-- Publishes listings and controls pricing, policies, availability, staff access, and payment setup.
-- Needs occupancy, revenue, booking-source, cancellation, and payout visibility.
+### Representative role responsibilities
 
-### Booking manager
+- **Organizer / booking owner:** completes Instant Book checkout, receives customer invoices and receipts, manages permitted booking changes, and responds to a documented security-deposit claim. The organizer cannot see private seller payouts or platform controls.
+- **Owner / account administrator:** controls the operator account, listings, policies, team memberships, and complete venue workflow. This role does not receive Gather-wide administration rights.
+- **Booking manager:** manages calendars, customer communication, booking changes, documents, and access instructions without changing bank, tax, commission, or payout settings.
+- **Operations / inspection staff:** handles access, setup, event completion, inspection notes, evidence, and proposed deposit outcomes. It cannot approve the financial outcome of its own proposal.
+- **Finance and settlement:** reviews venue invoices, credits, refunds, deposit ledgers, processing allocations, and calculated payouts. It does not edit listing content or daily availability.
+- **Board / auditor — read only:** reviews operator metrics, current terms, and audit-oriented status without changing bookings, claims, money, settings, or membership.
+- **Vendor owner / administrator:** controls the vendor profile, services, availability, staff, fulfilment, credentials, and vendor finances. It cannot see venue-private deposit or payout data.
+- **Order / fulfilment staff:** works assigned orders and records delivery, setup, completion, exceptions, and evidence without seeing commissions, payout destinations, or bank details.
+- **Vendor finance:** reviews vendor supplier invoices, Gather fee invoices, payment allocations, transfers, and bank-payout status without changing services or fulfilment evidence.
+- **Platform administrator:** administers tenants, memberships, access policy, global controls, and controlled future commercial-policy versions. Existing booking snapshots remain immutable.
+- **Marketplace operations / support:** reviews seller onboarding, listings, credentials, support cases, and synchronization exceptions. Access to participant records is reason-coded, time-limited, and audited; this role cannot approve money movement or change commercial policy.
+- **Platform finance / reconciliation:** reviews processor-to-ledger exceptions, fee documents, seller balances, transfers, and bank payouts. It cannot edit venue listings or vendor fulfilment evidence.
 
-- Manages calendars, customer communication, documents, booking changes, and access instructions.
-- Works primarily from an action queue and calendar, not an email inbox.
+### Boundaries and non-account parties
 
-### Finance staff
+- An **anonymous visitor** may search and view public listings without a membership. Public access never implies access to customer, seller, or platform records.
+- An **attendee** may receive directions or event information from the organizer but does not control the booking and does not need an account in the pilot. Multi-party planning and attendee accounts remain deferred.
+- A community association, venue business, vendor business, and Gather are organizations or tenants, not user roles. Employment or volunteer status does not determine permissions.
+- Payment processors, banks, tax services, email providers, Communal, and other calendar or operator systems are external systems, not human users. Their service accounts and API credentials require separate ownership, scopes, rotation, audit, and revocation controls.
 
-- Reconciles charges, refunds, security deposits, manual payments, fees, and payouts.
-- Needs append-only financial records and exports.
+### Authorization principles
 
-### Customer or event organizer
+- Apply **least privilege**: grant only the permissions needed for the active role and organization.
+- Apply **separation of duties** to sensitive workflows. In particular, distinguish proposing an inspection or deposit outcome from approving the related financial action; distinguish marketplace support from fee-policy changes and money movement; and keep fulfilment access separate from bank and payout data.
+- Default to **deny**. A route, API action, record, field, export, or administrative operation is unavailable unless the active membership explicitly permits it.
+- Enforce authorization server-side on every request and every object lookup. Client-side navigation, hidden buttons, and route guards are usability aids, not security boundaries.
+- Scope all private records and queries to the authenticated tenant and active membership. Never trust an organization, booking, invoice, vendor, or payout identifier supplied by the browser without verifying access to that object.
+- Require stronger controls for privileged operations: recent authentication where appropriate, approval policy, reason codes, immutable audit events, and alerts for material access, permission, policy, payout, refund, or deposit changes.
+- Make support access time-limited, purpose-bound, auditable, and revocable. Platform employment alone must not provide silent unrestricted access to participant data.
 
-- Searches by date, time, location, attendee count, activity, and amenities.
-- Expects accurate availability, a complete price, immediate confirmation, and self-service changes or cancellation.
-
-### Attendee
-
-- May receive directions or event information from the organizer but does not control the booking.
+The clickable prototype models account selection, role-specific navigation, and client-side route guards only. It does not authenticate identities or provide real authorization. Production must use secure identity verification, server-managed sessions, tenant-scoped authorization, and default-deny enforcement; the backend must return an authorization error even if a user bypasses the interface and calls a protected endpoint directly.
 
 ## Pilot MVP
 
@@ -273,7 +288,9 @@ Keep the first build narrow. The pilot should prove that accurate inventory can 
 ### Venue operations
 
 - Multi-venue and multi-space account structure.
-- Owner, manager, booking staff, finance, and viewer roles.
+- Organization memberships with owner / account administrator, booking manager, operations / inspection staff, finance and settlement, and board / auditor read-only roles.
+- Active-context selection for people who belong to more than one organization, without merging tenant data or permissions.
+- Server-enforced, default-deny, tenant-scoped authorization and separation of deposit proposal, financial approval, and payout permissions.
 - Listing readiness checks before Instant Book can be enabled.
 - Opening hours, special hours, blackout periods, lead time, booking horizon, minimum duration, and setup/cleanup buffers.
 - External calendar import/sync and visible sync-health status.

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260928e" />
+    <link rel="stylesheet" href="styles.css?v=20260928k" />
   </head>
   <body>
     <div class="app-shell">
@@ -20,10 +20,11 @@
         <nav class="main-nav" aria-label="Primary navigation">
           <button data-route="explore">Browse spaces</button>
           <button data-route="host">For space operators</button>
-          <button data-route="dashboard">Venue dashboard</button>
+          <button id="workspace-nav" data-route="sign-in">Demo accounts</button>
         </nav>
         <div class="header-actions">
-          <button class="text-button" data-route="dashboard">Sign in</button>
+          <button id="session-button" class="text-button" data-route="sign-in">Demo sign in</button>
+          <button id="sign-out-button" class="text-button" type="button" hidden>Sign out</button>
           <button class="button button-dark button-small" data-route="host">List your space</button>
         </div>
         <button class="mobile-menu" aria-label="Open menu" aria-expanded="false">☰</button>
@@ -31,8 +32,10 @@
 
       <div class="prototype-banner" role="note">
         <strong>Interactive prototype</strong>
-        <span>Sample listings, availability, pricing, and payments—no real booking or charge is created.</span>
+        <span>Demo sign-in and permissions are simulated; no account, password, booking, or charge is created.</span>
       </div>
+
+      <div id="session-context" class="session-context" aria-live="polite" hidden></div>
 
       <main id="app" tabindex="-1"></main>
 
@@ -41,13 +44,13 @@
           <div class="brand footer-brand"><span class="brand-mark"><span></span><span></span><span></span></span><span>gather</span></div>
           <p>Available spaces. Upfront pricing. Instant confirmation.</p>
         </div>
-        <div class="footer-links"><button data-route="explore">Browse spaces</button><button data-route="host">List your space</button><button data-route="dashboard">Venue dashboard</button></div>
+        <div class="footer-links"><button data-route="explore">Browse spaces</button><button data-route="host">List your space</button><button id="footer-workspace" data-route="sign-in">Demo accounts</button></div>
         <p class="pilot-note">Interactive prototype · Calgary, Alberta</p>
       </footer>
     </div>
 
     <div class="toast" role="status" aria-live="polite"></div>
 
-    <script type="module" src="app.js?v=20260928e"></script>
+    <script type="module" src="app.js?v=20260928k"></script>
   </body>
 </html>
