@@ -396,6 +396,25 @@ Every vendor profile should support:
 
 Do not use a single vague “Verified” badge. Display the specific checks completed and their expiry dates.
 
+## Organizer comparison and selection
+
+The organizer chooses an offering, not merely a category label. Group competing packages by a specific service need—such as catering, magic show, face painting, cake, décor, or photo booth—and allow at most one selected package within a mutually exclusive group. Complementary groups may be combined when the venue and event permit them.
+
+Every comparison card should show:
+
+- Supplier and package name.
+- Available, unavailable, quote-required, or venue-review status in text.
+- Total fixed price, per-person estimate, hourly price, tier, minimum order, or “quote required,” as applicable.
+- Average rating and verified completed-booking review count; new vendors show **New / no reviews**.
+- Included scope, capacity, inventory, lead time, service radius, delivery/setup/teardown window, venue fit, facility needs, and cancellation terms.
+- An exact reason when the package cannot be selected.
+
+Keep unavailable lower-priced packages visible by default. This lets the organizer make an informed trade-off between price, real availability, review evidence, scope, and fit instead of assuming the cheapest result can be booked. **Best match** prioritizes compatibility, availability, quality, price, response, and reliability; it never uses Gather’s commission rate. Price and rating sorts must preserve unmistakable availability labels, and sponsored placement must be separately labelled.
+
+For catering, collect cuisine, attendee count, menu/package, dietary support, allergy or cross-contact review needs, serving style, delivery/setup time, staff and tableware needs, venue-kitchen requirements, and organizer notes. Dietary and allergy fields describe vendor-reported capabilities; they must not promise “allergen-free.” A material allergy request requires a vendor acknowledgement or confirmation before the catering order becomes final. Sending the request does not count as confirmation: the response must come from an authenticated vendor user or a verified integration and remain tied to the exact package, date, time, attendance, and stated requirements.
+
+Before payment, recheck every selected offering using its complete service interval and current capacity, lead time, service area, venue policy, facility requirements, configuration, inventory, price, tax profile, and cancellation terms. If a selected package becomes invalid, preserve it as **Needs attention**, explain why, and require the organizer to replace or remove it—never silently remove it or reduce the charge. Snapshot the selected package, configuration, price, tax, terms, eligibility evidence, and supplier identity when payment is confirmed.
+
 ## Marketplace safeguards
 
 - Tell customers: **Gather may earn a commission when you book this provider.**

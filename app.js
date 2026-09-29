@@ -64,19 +64,53 @@ const spaces = [
   }
 ];
 
+const vendorServiceTypes = [
+  { id: "decor", label: "Decorations", description: "Compare décor scope, setup, teardown, style, price, and provider record." },
+  { id: "magic", label: "Magic shows", description: "Compare show length, audience size, performance style, price, and reviews." },
+  { id: "face-painting", label: "Face painting", description: "Compare artist time, participant capacity, materials, hygiene practices, and reviews." },
+  { id: "cake", label: "Cakes & desserts", description: "Compare size, customization, delivery, dietary options, price, and reviews." },
+  { id: "catering", label: "Catering", description: "Filter by cuisine, dietary support, allergy-handling practice, serving style, and guest fit." },
+  { id: "photo-booth", label: "Photo booths", description: "Compare booth time, staffing, prints, digital galleries, price, and reviews." }
+];
+
 const vendorServices = [
-  { id: "decor", category: "Decorations", name: "Celebration décor package", vendor: "Bright Day Events", invoicePrefix: "BDE", price: 285, description: "Balloon garland, backdrop, delivery, setup, and teardown", active: true, busy: [], taxProfile: { id: "TAX-BDE-CA", label: "GST · Bright Day sample profile (5%)", rate: 0.05 } },
-  { id: "magician", category: "Entertainment", name: "Family magic show", vendor: "WonderSpark Entertainment", invoicePrefix: "WSE", price: 350, description: "60-minute show for family celebrations", active: true, busy: [], taxProfile: { id: "TAX-WSE-CA", label: "GST · WonderSpark sample profile (5%)", rate: 0.05 } },
-  { id: "face-painting", category: "Entertainment", name: "Face painting", vendor: "Colour Cloud Studio", invoicePrefix: "CCS", price: 240, description: "Two-hour service for up to 30 participants", active: true, busy: [], taxProfile: { id: "TAX-CCS-CA", label: "GST · Colour Cloud sample profile (5%)", rate: 0.05 } },
-  { id: "cake", category: "Food & cake", name: "Celebration cake", vendor: "Prairie Sugar Co.", invoicePrefix: "PSC", price: 95, description: "Custom message and local delivery", active: true, busy: [], taxProfile: { id: "TAX-PSC-CA", label: "GST · Prairie Sugar sample profile (5%)", rate: 0.05 } },
-  { id: "catering", category: "Catering", name: "Family buffet", vendor: "Bow River Catering", invoicePrefix: "BRC", price: 780, description: "Sample package for up to 60 attendees", active: true, busy: [], taxProfile: { id: "TAX-BRC-CA", label: "GST · Bow River sample profile (5%)", rate: 0.05 } },
-  { id: "photo-booth", category: "Entertainment", name: "Photo booth", vendor: "Flashbox Calgary", invoicePrefix: "FBC", price: 425, description: "Three-hour staffed booth with digital gallery", active: true, busy: [{ date: "2026-10-17", start: 16, end: 23 }], taxProfile: { id: "TAX-FBC-CA", label: "GST · Flashbox sample profile (5%)", rate: 0.05 } }
+  { id: "decor-spruce", serviceType: "decor", category: "Decorations", name: "Essential celebration décor", vendor: "Spruce & Spark", invoicePrefix: "SAS", pricing: { type: "flat", amount: 210 }, rating: 4.8, reviewCount: 143, description: "Backdrop, table accents, delivery, and self-managed teardown", inclusions: ["Backdrop", "Table accents", "Delivery"], active: true, busy: [{ date: "2026-10-17", start: 15, end: 23 }], venueIds: ["ridgeview", "sunroom", "oak"], minGuests: 1, maxGuests: 150, minLeadDays: 5, taxProfile: { id: "TAX-SAS-CA", label: "GST · Spruce & Spark sample profile (5%)", rate: 0.05 } },
+  { id: "decor-bright-day", serviceType: "decor", category: "Decorations", name: "Celebration décor package", vendor: "Bright Day Events", invoicePrefix: "BDE", pricing: { type: "flat", amount: 285 }, rating: 4.8, reviewCount: 96, description: "Balloon garland, backdrop, delivery, setup, and teardown", inclusions: ["Balloon garland", "Backdrop", "Setup & teardown"], active: true, busy: [], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 1, maxGuests: 150, minLeadDays: 7, taxProfile: { id: "TAX-BDE-CA", label: "GST · Bright Day sample profile (5%)", rate: 0.05 } },
+  { id: "decor-modern-meadow", serviceType: "decor", category: "Decorations", name: "Signature room styling", vendor: "Modern Meadow Events", invoicePrefix: "MME", pricing: { type: "flat", amount: 410 }, rating: 4.3, reviewCount: 51, description: "Styled backdrop, premium table décor, setup, teardown, and design call", inclusions: ["Design call", "Premium backdrop", "Full setup & teardown"], active: true, busy: [], venueIds: ["ridgeview", "sunroom", "oak"], minGuests: 1, maxGuests: 150, minLeadDays: 10, taxProfile: { id: "TAX-MME-CA", label: "GST · Modern Meadow sample profile (5%)", rate: 0.05 } },
+
+  { id: "magic-prairie", serviceType: "magic", category: "Entertainment", name: "Kids' magic mini-show", vendor: "Prairie Pocket Magic", invoicePrefix: "PPM", pricing: { type: "flat", amount: 275 }, rating: 4.7, reviewCount: 84, description: "40-minute interactive show for up to 50 guests", inclusions: ["40-minute show", "Interactive finale"], active: true, busy: [{ date: "2026-10-17", start: 17, end: 21 }], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 1, maxGuests: 50, minLeadDays: 3, taxProfile: { id: "TAX-PPM-CA", label: "GST · Prairie Pocket sample profile (5%)", rate: 0.05 } },
+  { id: "magic-wonderspark", serviceType: "magic", category: "Entertainment", name: "Family magic show", vendor: "WonderSpark Entertainment", invoicePrefix: "WSE", pricing: { type: "flat", amount: 350 }, rating: 4.9, reviewCount: 128, description: "60-minute interactive show for family celebrations", inclusions: ["60-minute show", "Audience participation", "Small souvenir"], active: true, busy: [], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 1, maxGuests: 120, minLeadDays: 5, taxProfile: { id: "TAX-WSE-CA", label: "GST · WonderSpark sample profile (5%)", rate: 0.05 } },
+  { id: "magic-illusion-works", serviceType: "magic", category: "Entertainment", name: "Stage illusion experience", vendor: "Illusion Works Calgary", invoicePrefix: "IWC", pricing: { type: "flat", amount: 480 }, rating: 4.2, reviewCount: 36, description: "75-minute stage show with sound cues and two performers", inclusions: ["75-minute show", "Two performers", "Sound equipment"], active: true, busy: [], venueIds: ["ridgeview", "oak"], minGuests: 30, maxGuests: 150, minLeadDays: 10, taxProfile: { id: "TAX-IWC-CA", label: "GST · Illusion Works sample profile (5%)", rate: 0.05 } },
+
+  { id: "face-palette-pop", serviceType: "face-painting", category: "Entertainment", name: "One-hour face painting", vendor: "Palette Pop Parties", invoicePrefix: "PPP", pricing: { type: "flat", amount: 190 }, rating: 4.8, reviewCount: 201, description: "One artist for up to 18 participants", inclusions: ["One artist", "Up to 18 participants", "Cosmetic-grade paints"], active: true, busy: [{ date: "2026-10-17", start: 17, end: 22 }], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 1, maxGuests: 18, minLeadDays: 3, taxProfile: { id: "TAX-PPP-CA", label: "GST · Palette Pop sample profile (5%)", rate: 0.05 } },
+  { id: "face-colour-cloud", serviceType: "face-painting", category: "Entertainment", name: "Two-hour face painting", vendor: "Colour Cloud Studio", invoicePrefix: "CCS", pricing: { type: "flat", amount: 240 }, rating: 4.8, reviewCount: 164, description: "One artist for up to 30 participants", inclusions: ["Two hours", "Up to 30 participants", "Hygiene station"], active: true, busy: [], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 1, maxGuests: 30, minLeadDays: 4, taxProfile: { id: "TAX-CCS-CA", label: "GST · Colour Cloud sample profile (5%)", rate: 0.05 } },
+  { id: "face-imagination", serviceType: "face-painting", category: "Entertainment", name: "Two-artist party studio", vendor: "Imagination Faces", invoicePrefix: "IMF", pricing: { type: "flat", amount: 315 }, rating: 4.3, reviewCount: 52, description: "Two artists for up to 60 participants", inclusions: ["Two artists", "Up to 60 participants", "Glitter-free option"], active: true, busy: [], venueIds: ["ridgeview", "crestwood", "oak"], minGuests: 20, maxGuests: 60, minLeadDays: 7, taxProfile: { id: "TAX-IMF-CA", label: "GST · Imagination Faces sample profile (5%)", rate: 0.05 } },
+
+  { id: "cake-sweet-corner", serviceType: "cake", category: "Food & cake", name: "Classic celebration cake", vendor: "Sweet Corner Bakery", invoicePrefix: "SCB", pricing: { type: "flat", amount: 75 }, rating: 4.7, reviewCount: 312, description: "One-tier cake, standard flavours, inscription, and pickup", inclusions: ["Serves 40", "Custom inscription", "Pickup"], active: true, busy: [], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 1, maxGuests: 40, minLeadDays: 21, dietary: ["Vegetarian"], allergenNote: "Produced in a shared facility that handles common allergens.", taxProfile: { id: "TAX-SCB-CA", label: "GST · Sweet Corner sample profile (5%)", rate: 0.05 } },
+  { id: "cake-prairie-sugar", serviceType: "cake", category: "Food & cake", name: "Delivered celebration cake", vendor: "Prairie Sugar Co.", invoicePrefix: "PSC", pricing: { type: "flat", amount: 95 }, rating: 4.8, reviewCount: 186, description: "Custom message, standard design, and local delivery", inclusions: ["Serves 60", "Custom message", "Local delivery"], active: true, busy: [], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 1, maxGuests: 60, minLeadDays: 7, dietary: ["Vegetarian", "Gluten-aware"], allergenNote: "Gluten-aware recipe available; shared kitchen and cross-contact remain possible.", taxProfile: { id: "TAX-PSC-CA", label: "GST · Prairie Sugar sample profile (5%)", rate: 0.05 } },
+  { id: "cake-sugar-stone", serviceType: "cake", category: "Food & cake", name: "Premium themed cake", vendor: "Sugar & Stone Studio", invoicePrefix: "SSS", pricing: { type: "flat", amount: 145 }, rating: 4.3, reviewCount: 87, description: "Two-tier themed cake with delivery and display board", inclusions: ["Serves 75", "Theme consultation", "Delivery"], active: true, busy: [], venueIds: ["ridgeview", "sunroom", "oak"], minGuests: 1, maxGuests: 75, minLeadDays: 14, dietary: ["Vegetarian", "Vegan"], allergenNote: "Vegan option is vendor-reported; confirm allergens and cross-contact directly.", taxProfile: { id: "TAX-SSS-CA", label: "GST · Sugar & Stone sample profile (5%)", rate: 0.05 } },
+
+  { id: "catering-neighbourhood", serviceType: "catering", category: "Catering", name: "Neighbourhood comfort buffet", vendor: "Neighbourhood Kitchen", invoicePrefix: "NKT", pricing: { type: "per_person", amount: 11, minimum: 440 }, rating: 4.8, reviewCount: 214, description: "Budget-friendly buffet or drop-off service", inclusions: ["Two mains", "Two sides", "Disposable serviceware"], active: true, busy: [{ date: "2026-10-17", start: 16, end: 23 }], venueIds: ["ridgeview", "sunroom", "oak"], minGuests: 20, maxGuests: 80, minLeadDays: 5, cuisines: ["Canadian", "Mediterranean"], menuStyles: ["Classic comfort", "Vegetarian-forward"], dietary: ["Vegetarian", "Vegan", "Gluten-aware"], allergyReview: ["gluten", "dairy"], servingStyles: ["Buffet", "Drop-off"], allergenNote: "Ingredient list available; shared kitchen handles common allergens.", deliveryWindow: "60–90 minutes before service", taxProfile: { id: "TAX-NKT-CA", label: "GST · Neighbourhood Kitchen sample profile (5%)", rate: 0.05 } },
+  { id: "catering-bow-river", serviceType: "catering", category: "Catering", name: "Family buffet", vendor: "Bow River Catering", invoicePrefix: "BRC", pricing: { type: "per_person", amount: 13, minimum: 520 }, rating: 4.6, reviewCount: 128, description: "Flexible buffet with delivery, setup, and dietary substitutions", inclusions: ["Two mains", "Three sides", "Delivery & buffet setup"], active: true, busy: [], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 20, maxGuests: 120, minLeadDays: 7, cuisines: ["Canadian", "International"], menuStyles: ["Classic comfort", "Kids-friendly", "Vegetarian-forward"], dietary: ["Vegetarian", "Vegan", "Halal", "Gluten-aware"], allergyReview: ["nut", "gluten", "dairy"], servingStyles: ["Buffet", "Drop-off"], allergenNote: "Vendor reviews allergy requests individually; shared kitchen and cross-contact remain possible.", deliveryWindow: "45–75 minutes before service", taxProfile: { id: "TAX-BRC-CA", label: "GST · Bow River sample profile (5%)", rate: 0.05 } },
+  { id: "catering-saffron", serviceType: "catering", category: "Catering", name: "South Asian celebration buffet", vendor: "Saffron Table YYC", invoicePrefix: "STY", pricing: { type: "per_person", amount: 15, minimum: 600 }, rating: 4.6, reviewCount: 93, description: "South Asian buffet with vegetarian and halal menu paths", inclusions: ["Three mains", "Rice & breads", "Buffet setup"], active: true, busy: [], venueIds: ["ridgeview", "sunroom", "oak"], minGuests: 25, maxGuests: 140, minLeadDays: 8, cuisines: ["Indian", "South Asian"], menuStyles: ["South Asian", "Vegetarian-forward"], dietary: ["Vegetarian", "Vegan", "Halal", "Gluten-aware"], allergyReview: ["nut", "gluten", "dairy"], servingStyles: ["Buffet", "Family-style"], allergenNote: "Halal ingredients available. Confirm nut, dairy, gluten, and cross-contact requirements with the vendor.", deliveryWindow: "60 minutes before service", taxProfile: { id: "TAX-STY-CA", label: "GST · Saffron Table sample profile (5%)", rate: 0.05 } },
+  { id: "catering-grand", serviceType: "catering", category: "Catering", name: "Plated dinner service", vendor: "Grand Fork & Linen", invoicePrefix: "GFL", pricing: { type: "per_person", amount: 18, minimum: 900 }, rating: 4.1, reviewCount: 34, description: "Plated or family-style dinner with service staff and basic tableware", inclusions: ["Two-course menu", "Service staff", "Basic tableware"], active: true, busy: [], venueIds: ["ridgeview", "oak"], minGuests: 40, maxGuests: 150, minLeadDays: 14, cuisines: ["Canadian", "Italian"], menuStyles: ["Italian", "Canadian plated"], dietary: ["Vegetarian", "Gluten-aware"], allergyReview: ["gluten", "dairy"], servingStyles: ["Plated", "Family-style"], allergenNote: "Dietary substitutions are vendor-reported and require written confirmation before service.", deliveryWindow: "90 minutes before service", taxProfile: { id: "TAX-GFL-CA", label: "GST · Grand Fork sample profile (5%)", rate: 0.05 } },
+
+  { id: "photo-snaplocal", serviceType: "photo-booth", category: "Entertainment", name: "Digital booth", vendor: "SnapLocal", invoicePrefix: "SNL", pricing: { type: "flat", amount: 325 }, rating: 4.7, reviewCount: 119, description: "Two-hour self-serve booth with digital gallery", inclusions: ["Two hours", "Digital gallery", "Standard backdrop"], active: true, busy: [{ date: "2026-10-17", start: 16, end: 23 }], venueIds: ["ridgeview", "sunroom", "oak"], minGuests: 1, maxGuests: 150, minLeadDays: 3, taxProfile: { id: "TAX-SNL-CA", label: "GST · SnapLocal sample profile (5%)", rate: 0.05 } },
+  { id: "photo-flashbox", serviceType: "photo-booth", category: "Entertainment", name: "Staffed photo booth", vendor: "Flashbox Calgary", invoicePrefix: "FBC", pricing: { type: "flat", amount: 425 }, rating: 4.8, reviewCount: 142, description: "Three-hour staffed booth with prints and digital gallery", inclusions: ["Three hours", "Attendant", "Prints & digital gallery"], active: true, busy: [], venueIds: ["ridgeview", "crestwood", "sunroom", "oak"], minGuests: 1, maxGuests: 150, minLeadDays: 5, taxProfile: { id: "TAX-FBC-CA", label: "GST · Flashbox sample profile (5%)", rate: 0.05 } },
+  { id: "photo-portrait-lounge", serviceType: "photo-booth", category: "Entertainment", name: "Portrait lounge experience", vendor: "Portrait Lounge YYC", invoicePrefix: "PLY", pricing: { type: "flat", amount: 540 }, rating: 4.2, reviewCount: 39, description: "Four-hour staffed portrait lounge with premium backdrop and live gallery", inclusions: ["Four hours", "Two attendants", "Premium backdrop & gallery"], active: true, busy: [], venueIds: ["ridgeview", "oak"], minGuests: 30, maxGuests: 150, minLeadDays: 10, taxProfile: { id: "TAX-PLY-CA", label: "GST · Portrait Lounge sample profile (5%)", rate: 0.05 } }
 ];
 
 const app = document.querySelector("#app");
 const toast = document.querySelector(".toast");
 let bookingStep = 1;
-let bookingData = { date: "2026-10-17", start: "18:00", end: "23:00", guests: 60, event: "Birthday celebration", contact: "Alex Morgan", email: "alex@example.com", notes: "Family birthday dinner with music and a catered buffet.", addons: [], vendorServices: [] };
+let bookingData = {
+  date: "2026-10-17", start: "18:00", end: "23:00", guests: 60, event: "Birthday celebration", contact: "Alex Morgan", email: "alex@example.com", notes: "Family birthday dinner with music and a catered buffet.", addons: [], vendorServices: [],
+  vendorQuantities: { "face-painting": 30, cake: 60 },
+  cateringPreferences: { cuisine: "any", menu: "any", dietary: [], allergies: [], servingStyle: "any", notes: "" }
+};
+let vendorSort = "best-match";
+let vendorConfirmationRequests = {};
+let vendorConfirmations = {};
 let selectedSpaceId = "ridgeview";
 let depositView = "review";
 let depositDeduction = 0;
@@ -93,6 +127,13 @@ let feePolicy = {
   processingTreatment: "deduct_from_payout",
   processingAllocation: "proportional"
 };
+let supportSession = null;
+let supportExpiryTimer = null;
+let supportAuditEvents = [
+  { time: "Today · 9:42 AM", actor: "Noor Ahmed", action: "Ended read-only support session", target: "Crestwood Community Association", caseId: "SUP-2081", scope: "Read-only", reason: "Review calendar synchronization", outcome: "Ended by support user" },
+  { time: "Yesterday · 3:18 PM", actor: "Taylor Chen", action: "Reviewed membership-role change", target: "Bright Day Events", caseId: "IAM-1974", scope: "Identity administration", reason: "Confirm requested membership change", outcome: "No change made" },
+  { time: "Sep 26 · 11:03 AM", actor: "Riley Patel", action: "Exported reconciliation exception", target: "PST-WSE-1033", caseId: "FIN-1912", scope: "Finance record", reason: "Investigate processor allocation", outcome: "Export recorded" }
+];
 
 const financeDemo = {
   bookingId: "BKG-1033",
@@ -198,10 +239,10 @@ const demoRoles = [
     routes: ["vendor-dashboard", "vendor-invoice", "vendor-payout"]
   },
   {
-    id: "platform-admin", accountType: "platform", role: "Platform administrator", shortRole: "Platform admin", name: "Taylor Chen", initials: "TC", organization: "Gather", landing: "platform-dashboard", workspaceLabel: "Open platform console",
-    summary: "Administers organizations, access policy, platform configuration, and controlled commercial-policy changes.",
-    permissionKeys: ["platform.access", "platform.policy", "platform.marketplace", "platform.support", "platform.finance"],
-    permissions: ["Administer tenants, memberships, roles, and global controls", "Review marketplace and operational queues", "Create future commercial-policy versions", "View reconciliation health and audit history"],
+    id: "platform-admin", accountType: "platform", role: "Platform administrator · super admin", shortRole: "Platform admin", name: "Taylor Chen", initials: "TC", organization: "Gather", landing: "platform-dashboard", workspaceLabel: "Open super-admin console",
+    summary: "Oversees organizations, access policy, marketplace activity, financial health, audit history, and controlled support access.",
+    permissionKeys: ["platform.access", "platform.policy", "platform.marketplace", "platform.support", "platform.support.session", "platform.finance", "platform.audit"],
+    permissions: ["Administer tenants, memberships, roles, and global controls", "Review cross-organization bookings, vendor orders, deposits, and settlement health", "Create future commercial-policy versions", "Start reason-coded, expiring read-only support sessions and review audit history"],
     restrictions: ["Support access must still be time-limited and reason-coded", "Cannot silently rewrite an existing booking’s snapshotted terms"],
     routes: ["platform-dashboard", "fee-settings"]
   },
@@ -209,7 +250,7 @@ const demoRoles = [
     id: "platform-ops", accountType: "platform", role: "Marketplace operations / support", shortRole: "Platform ops", name: "Noor Ahmed", initials: "NA", organization: "Gather", landing: "platform-dashboard", workspaceLabel: "Open operations console",
     summary: "Handles seller onboarding, listing moderation, credential review, support, and exception queues.",
     permissionKeys: ["platform.marketplace", "platform.support"],
-    permissions: ["Review operator and vendor onboarding", "Moderate listings and category credentials", "Manage support and synchronization exceptions", "Use audited, time-limited support access"],
+    permissions: ["Review operator and vendor onboarding", "Moderate listings and category credentials", "Manage support and synchronization exceptions", "Request or escalate controlled support access"],
     restrictions: ["Cannot change fee policy or approve platform money movement", "Cannot expose full bank, tax, or payment credentials"],
     routes: ["platform-dashboard"]
   },
@@ -266,6 +307,48 @@ const moneyExact = value => new Intl.NumberFormat("en-CA", { style: "currency", 
 const deductionAmount = value => value ? `−${moneyExact(value)}` : moneyExact(0);
 const cadMoney = value => money(value).replace("$", "CA$");
 const escapeHtml = value => String(value).replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+const formatSupportTimestamp = value => new Date(value).toLocaleString("en-CA", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+function scheduleSupportExpiry() {
+  if (supportExpiryTimer) clearTimeout(supportExpiryTimer);
+  supportExpiryTimer = null;
+  if (!supportSession) return;
+  const expectedExpiry = supportSession.expiresAt;
+  const delay = Math.max(0, new Date(expectedExpiry).getTime() - Date.now());
+  supportExpiryTimer = setTimeout(() => {
+    if (!supportSession || supportSession.expiresAt !== expectedExpiry) return;
+    if (endSupportSession("Expired automatically at the configured time")) {
+      render(location.hash.slice(1) || "home");
+      showToast("Read-only support access expired and was added to the audit trail.");
+    }
+  }, delay + 25);
+}
+
+function endSupportSession(outcome) {
+  if (!supportSession) return false;
+  const endedSession = supportSession;
+  supportAuditEvents.unshift({
+    timestamp: new Date().toISOString(),
+    actor: endedSession.actor,
+    action: "Ended read-only support session",
+    target: endedSession.target,
+    caseId: endedSession.caseId,
+    scope: endedSession.scope,
+    reason: endedSession.reason,
+    startedAt: endedSession.startedAt,
+    expiresAt: endedSession.expiresAt,
+    outcome
+  });
+  supportSession = null;
+  if (supportExpiryTimer) clearTimeout(supportExpiryTimer);
+  supportExpiryTimer = null;
+  return true;
+}
+
+function expireSupportSessionIfNeeded() {
+  if (!supportSession || Date.now() < new Date(supportSession.expiresAt).getTime()) return false;
+  return endSupportSession("Expired automatically at the configured time");
+}
 
 const timeAsHours = value => {
   const [hours, minutes] = value.split(":").map(Number);
@@ -277,8 +360,77 @@ const formatHour = value => formatTime(`${String(Math.floor(value)).padStart(2, 
 const currentSpace = () => spaces.find(space => space.id === selectedSpaceId) || spaces[0];
 const currentAddons = () => currentSpace().addons;
 const selectedVendorServices = () => vendorServices.filter(item => bookingData.vendorServices.includes(item.id));
-const selectedBillableVendorServices = () => selectedVendorServices().filter(item => vendorAvailability(item).available);
+const selectedBillableVendorServices = () => selectedVendorServices();
 const taxFor = (value, profile) => Math.round(value * profile.rate * 100) / 100;
+const prototypeToday = new Date("2026-09-28T12:00:00-06:00");
+
+const servicePrice = service => service.pricing.type === "per_person"
+  ? Math.max(service.pricing.minimum || 0, service.pricing.amount * Number(bookingData.guests))
+  : service.pricing.amount;
+
+function servicePriceBreakdown(service) {
+  if (service.pricing.type !== "per_person") return `${money(servicePrice(service))} fixed package`;
+  const quantity = Number(bookingData.guests);
+  const calculated = service.pricing.amount * quantity;
+  const minimumApplied = (service.pricing.minimum || 0) > calculated;
+  return minimumApplied
+    ? `${money(service.pricing.amount)} × ${quantity} = ${money(calculated)} · ${money(service.pricing.minimum)} minimum applied`
+    : `${money(service.pricing.amount)} × ${quantity} guests`;
+}
+
+const serviceTypeFor = service => vendorServiceTypes.find(type => type.id === service.serviceType);
+const cancellationPolicyFor = service => ({
+  catering: "Full refund until 14 days before service; 50% from 7–13 days; non-refundable inside 7 days after vendor confirmation.",
+  cake: "Full refund until 14 days before pickup or delivery; custom-production costs are non-refundable after work begins.",
+  decor: "Full refund until 7 days before service; 50% from 3–6 days; non-refundable inside 72 hours.",
+  magic: "Full refund until 7 days before service; one date change is allowed subject to availability.",
+  "face-painting": "Full refund until 7 days before service; 50% inside 7 days; weather or safety changes are handled with the vendor.",
+  "photo-booth": "Full refund until 7 days before service; 50% from 3–6 days; non-refundable inside 72 hours."
+})[service.serviceType];
+const setupHoursFor = service => service.setupHours ?? ({ catering: 1.5, cake: 0.5, decor: 2, magic: 0.5, "face-painting": 0.5, "photo-booth": 1 })[service.serviceType] ?? 0;
+const teardownHoursFor = service => service.teardownHours ?? ({ catering: 0.5, cake: 0, decor: 1, magic: 0.5, "face-painting": 0.5, "photo-booth": 1 })[service.serviceType] ?? 0;
+const serviceQuantity = service => ["face-painting", "cake"].includes(service.serviceType)
+  ? Number(bookingData.vendorQuantities[service.serviceType] || bookingData.guests)
+  : Number(bookingData.guests);
+const allergyConfirmationSignature = service => JSON.stringify({
+  serviceId: service.id,
+  spaceId: currentSpace().id,
+  date: bookingData.date,
+  start: bookingData.start,
+  end: bookingData.end,
+  guests: bookingData.guests,
+  eventType: bookingData.event,
+  venueAddons: [...bookingData.addons].sort(),
+  preferences: bookingData.cateringPreferences
+});
+const requiresAllergyConfirmation = service => service.serviceType === "catering" && bookingData.cateringPreferences.allergies.length > 0;
+const hasCurrentAllergyConfirmationRequest = service => requiresAllergyConfirmation(service) && vendorConfirmationRequests[service.id] === allergyConfirmationSignature(service);
+const hasCurrentAllergyConfirmation = service => !requiresAllergyConfirmation(service) || vendorConfirmations[service.id] === allergyConfirmationSignature(service);
+
+function leadDaysUntilBooking() {
+  const bookingDate = new Date(`${bookingData.date}T12:00:00-06:00`);
+  return Math.floor((bookingDate - prototypeToday) / 86400000);
+}
+
+function vendorMatchesCateringPreferences(service) {
+  if (service.serviceType !== "catering") return true;
+  const preferences = bookingData.cateringPreferences;
+  if (preferences.cuisine !== "any" && !(service.cuisines || []).includes(preferences.cuisine)) return false;
+  if (preferences.menu !== "any" && !(service.menuStyles || []).includes(preferences.menu)) return false;
+  if (!preferences.dietary.every(requirement => (service.dietary || []).includes(requirement))) return false;
+  if (!preferences.allergies.every(requirement => (service.allergyReview || []).includes(requirement))) return false;
+  if (preferences.servingStyle !== "any" && !(service.servingStyles || []).includes(preferences.servingStyle)) return false;
+  return true;
+}
+
+function sortedVendorServices(services) {
+  return [...services].sort((a, b) => {
+    const availabilityDifference = Number(vendorAvailability(b).available) - Number(vendorAvailability(a).available);
+    if (vendorSort === "price") return servicePrice(a) - servicePrice(b) || availabilityDifference;
+    if (vendorSort === "rating") return b.rating - a.rating || b.reviewCount - a.reviewCount;
+    return availabilityDifference || b.rating - a.rating || servicePrice(a) - servicePrice(b);
+  });
+}
 
 function durationHours() {
   return Math.max(0, timeAsHours(bookingData.end) - timeAsHours(bookingData.start));
@@ -301,16 +453,27 @@ function availability(space = currentSpace()) {
 
 function vendorAvailability(service) {
   if (!service.active) return { available: false, message: "This provider is not accepting orders." };
+  if (!(service.venueIds || []).includes(currentSpace().id)) return { available: false, message: `This package is not offered at ${currentSpace().name}.` };
+  const quantity = serviceQuantity(service);
+  if (quantity < service.minGuests || quantity > service.maxGuests) return { available: false, message: `Package capacity: ${service.minGuests}–${service.maxGuests}; requested quantity is ${quantity}.` };
+  const leadDays = leadDaysUntilBooking();
+  if (!Number.isFinite(leadDays) || leadDays < service.minLeadDays) return { available: false, message: `Requires at least ${service.minLeadDays} days’ lead time.` };
   const start = timeAsHours(bookingData.start);
   const end = timeAsHours(bookingData.end);
   const conflict = (service.busy || []).find(block => block.date === bookingData.date && start < block.end && end > block.start);
-  if (conflict) return { available: false, message: `Unavailable ${formatHour(conflict.start)}–${formatHour(conflict.end)} on this date.` };
-  return { available: true, message: "Available for the selected date and time." };
+  if (conflict) return { available: false, message: `The complete ${formatHour(start)}–${formatHour(end)} provider hold—including setup and teardown—overlaps provider availability (${formatHour(conflict.start)}–${formatHour(conflict.end)}).` };
+  if (!vendorMatchesCateringPreferences(service)) return { available: false, message: "This package does not match the selected catering requirements." };
+  if (requiresAllergyConfirmation(service) && !hasCurrentAllergyConfirmation(service)) return hasCurrentAllergyConfirmationRequest(service)
+    ? { available: true, requiresConfirmation: true, confirmationRequested: true, message: "Confirmation request sent; payment remains blocked until the vendor responds in writing." }
+    : { available: true, requiresConfirmation: true, message: "Schedule fits, but written vendor confirmation of the selected allergy requirements is required before payment." };
+  if (requiresAllergyConfirmation(service)) return { available: true, confirmed: true, message: "Available; vendor confirmation is recorded for the selected allergy requirements." };
+  return { available: true, message: `Available for the complete ${formatHour(start)}–${formatHour(end)} provider hold, including setup and teardown within the booked venue time.` };
 }
 
 function selectedVendorAvailability() {
   const unavailable = selectedVendorServices().filter(service => !vendorAvailability(service).available);
-  return { available: unavailable.length === 0, unavailable };
+  const pendingConfirmations = selectedVendorServices().filter(service => vendorAvailability(service).requiresConfirmation);
+  return { available: unavailable.length === 0, ready: unavailable.length === 0 && pendingConfirmations.length === 0, unavailable, pendingConfirmations };
 }
 
 function pricing() {
@@ -318,9 +481,9 @@ function pricing() {
   const addons = currentAddons().filter(item => bookingData.addons.includes(item.id)).reduce((sum, item) => sum + item.price, 0);
   const venueSubtotal = rental + addons;
   const selectedVendors = selectedBillableVendorServices();
-  const vendorSubtotal = selectedVendors.reduce((sum, item) => sum + item.price, 0);
+  const vendorSubtotal = selectedVendors.reduce((sum, item) => sum + servicePrice(item), 0);
   const venueTax = taxFor(venueSubtotal, venueTaxProfileFor(currentSpace()));
-  const vendorTax = selectedVendors.reduce((sum, item) => sum + taxFor(item.price, item.taxProfile), 0);
+  const vendorTax = selectedVendors.reduce((sum, item) => sum + taxFor(servicePrice(item), item.taxProfile), 0);
   const tax = venueTax + vendorTax;
   const servicesTotal = venueSubtotal + venueTax + vendorSubtotal + vendorTax;
   const deposit = currentSpace().deposit;
@@ -336,7 +499,22 @@ function createBookingSnapshot() {
     booking: bookingData,
     totals: pricing(),
     addons: currentAddons().filter(item => bookingData.addons.includes(item.id)),
-    vendors: selectedBillableVendorServices(),
+    vendors: selectedBillableVendorServices().map(item => ({
+      ...item,
+      price: servicePrice(item),
+      pricingBasis: servicePriceBreakdown(item),
+      cancellationPolicy: cancellationPolicyFor(item),
+      serviceWindow: { start: formatTime(bookingData.start), end: formatTime(bookingData.end), setupMinutes: setupHoursFor(item) * 60, teardownMinutes: teardownHoursFor(item) * 60 },
+      allergyConfirmation: requiresAllergyConfirmation(item) ? { status: "Vendor confirmed", source: "Authenticated vendor response (simulated in prototype)", signature: allergyConfirmationSignature(item) } : null,
+      selectedConfiguration: item.serviceType === "catering" ? {
+        ...bookingData.cateringPreferences,
+        dietary: bookingData.cateringPreferences.dietary.length ? bookingData.cateringPreferences.dietary.join(", ") : "any",
+        allergy: bookingData.cateringPreferences.allergies.length ? bookingData.cateringPreferences.allergies.join(", ") : "none",
+        dietaryRequirements: [...bookingData.cateringPreferences.dietary],
+        allergyRequirements: [...bookingData.cateringPreferences.allergies],
+        guests: bookingData.guests
+      } : { guests: bookingData.guests, quantity: serviceQuantity(item) }
+    })),
     venueTaxProfile: venueTaxProfileFor(currentSpace()),
     venueInvoiceNumber: `INV-${currentSpace().invoicePrefix}-${reference}`,
     receiptNumber: `RCT-${reference}`
@@ -437,7 +615,14 @@ function venuePage() {
   const space = currentSpace();
   const totals = pricing();
   const slot = availability();
-  const availableVendorServices = vendorServices.filter(service => vendorAvailability(service).available).slice(0, 4);
+  const vendorPreviews = vendorServiceTypes.map(type => {
+    const offerings = vendorServices.filter(service => service.serviceType === type.id && (service.venueIds || []).includes(space.id));
+    const available = offerings.filter(service => vendorAvailability(service).available);
+    if (!offerings.length) return "";
+    const lowestAvailable = available.length ? Math.min(...available.map(servicePrice)) : null;
+    const topRating = Math.max(...offerings.map(service => service.rating));
+    return `<div class="addon-preview vendor-preview"><div><span class="vendor-category">${type.label}</span><strong>${offerings.length} provider option${offerings.length === 1 ? "" : "s"}</strong><small>${available.length} available now · ratings up to ${topRating.toFixed(1)}</small></div><span>${lowestAvailable === null ? "Compare" : `from ${money(lowestAvailable)}`}</span></div>`;
+  }).filter(Boolean).join("");
   const selectedDate = new Date(bookingData.date + "T12:00:00").toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric" });
   const busySlots = space.busy.filter(block => block.date === bookingData.date).map(block => `<span class="slot booked">Booked · ${formatHour(block.start)}–${formatHour(block.end)}</span>`).join("");
   const canStartBooking = !activeRole() || activeRole().accountType === "customer";
@@ -448,7 +633,7 @@ function venuePage() {
       <div class="content-block"><h3>Availability for ${selectedDate}</h3><div class="slot-row"><span class="slot available">Booking hours: 8:00 AM–11:00 PM</span>${busySlots}<span class="slot ${slot.available ? "selected" : "booked"}">${slot.available ? "✓ Available" : "Not available"} · ${formatTime(bookingData.start)}–${formatTime(bookingData.end)}</span></div><p class="block-note">Booked periods are unavailable. Your selected time must include setup and cleanup.</p></div>
       <div class="content-block"><h3>Included in the hourly rate</h3><div class="amenities included">${space.included.map(item => `<span>✓ ${item}</span>`).join("")}</div></div>
       <div class="content-block"><h3>Available add-ons</h3><p>Select available add-ons at checkout.</p><div class="addon-preview-grid">${currentAddons().filter(item => item.available).slice(0, 4).map(item => `<div class="addon-preview"><div><strong>${item.name}</strong><small>${item.description}</small></div><span>+${money(item.price)}</span></div>`).join("")}</div></div>
-      <div class="content-block"><h3>Optional services from local vendors</h3><p>Add independent providers at checkout. Each vendor issues its own supplier invoice and remains responsible for fulfilment.</p><div class="addon-preview-grid">${availableVendorServices.map(item => `<div class="addon-preview vendor-preview"><div><span class="vendor-category">${item.category}</span><strong>${item.name}</strong><small>${item.vendor} · available for this date and time</small></div><span>+${money(item.price)}</span></div>`).join("")}</div><p class="block-note">Vendor availability is checked for the selected date and time and rechecked before payment. Gather does not add vendor commission as a separate customer charge.</p></div>
+      <div class="content-block"><h3>Compare optional services from local vendors</h3><p>Compare providers by package, availability, total price, rating, reviews, capacity, and fit before selecting an offering at checkout.</p><div class="addon-preview-grid">${vendorPreviews}</div><p class="block-note">Unavailable options remain visible during comparison. Vendor availability and compatibility are rechecked before payment. Sample ratings and reviews are fictional prototype data.</p></div>
       <div class="content-block"><h3>Venue rules</h3><p>${space.rules} Setup and cleanup must be completed within your booked time.</p></div>
       <div class="content-block"><h3>Refundable security deposit</h3>${space.deposit ? `<p><strong>${money(space.deposit)} is required for this sample booking.</strong> It is shown separately and collected at checkout.</p><div class="deposit-steps"><div><span>1</span><strong>Before the event</strong><small>The amount and deposit policy are accepted at checkout.</small></div><div><span>2</span><strong>After the event</strong><small>The venue team records the inspection within its configured deadline.</small></div><div><span>3</span><strong>Release or documented claim</strong><small>No issue: the full refund is initiated. Any claim requires an itemized reason and evidence.</small></div></div><p class="block-note">Refund timing after release depends on the payment provider and the customer’s bank. This is a sample policy for prototype review.</p>` : `<p><strong>No security deposit is required for this sample listing.</strong> No deposit is added at checkout and no post-event release task is created.</p>`}</div>
     </div>
@@ -465,15 +650,54 @@ function summaryCard() {
   const totals = pricing();
   const selectedAddons = currentAddons().filter(item => bookingData.addons.includes(item.id));
   const selectedVendors = selectedBillableVendorServices();
-  return `<aside class="summary-card"><div class="mini-space"></div><h3>${currentSpace().name}</h3><p>${new Date(bookingData.date + "T12:00:00").toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" })}<br>${formatTime(bookingData.start)}–${formatTime(bookingData.end)} · ${bookingData.guests} attendees</p><div class="summary-available">⚡ Instant Book</div><div class="price-lines"><div class="price-line"><span>Space rental</span><span>${money(totals.rental)}</span></div>${selectedAddons.map(item => `<div class="price-line"><span>${item.name}</span><span>${money(item.price)}</span></div>`).join("")}${selectedVendors.map(item => `<div class="price-line"><span>${item.name}</span><span>${money(item.price)}</span></div>`).join("")}<div class="price-line"><span>Estimated supplier taxes</span><span>${money(totals.tax)}</span></div><div class="price-line total"><span>Services total</span><span>${money(totals.servicesTotal)}</span></div>${totals.deposit ? `<div class="price-line"><span>Refundable security deposit</span><span>${money(totals.deposit)}</span></div>` : ""}<div class="price-line due"><span>Total due today (CAD)</span><span>${money(totals.dueNow)}</span></div></div></aside>`;
+  const bookingSubtotal = totals.venueSubtotal + totals.vendorSubtotal;
+  return `<aside class="summary-card"><div class="mini-space"></div><h3>${currentSpace().name}</h3><p>${new Date(bookingData.date + "T12:00:00").toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" })}<br>${formatTime(bookingData.start)}–${formatTime(bookingData.end)} · ${bookingData.guests} attendees</p><div class="summary-available">⚡ Venue Instant Book</div><div class="price-lines"><div class="price-line"><span>Space rental</span><span>${money(totals.rental)}</span></div>${selectedAddons.map(item => `<div class="price-line"><span>${item.name}</span><span>${money(item.price)}</span></div>`).join("")}${selectedVendors.map(item => `<div class="price-line"><span>${item.name}<small>${item.vendor}${item.pricing.type === "per_person" ? ` · ${servicePriceBreakdown(item)}` : ""}</small></span><span>${money(servicePrice(item))}</span></div>`).join("")}<div class="price-line subtotal"><span>Booking subtotal before tax</span><span>${money(bookingSubtotal)}</span></div><div class="price-line"><span>Venue supplier tax<small>${venueTaxProfileFor(currentSpace()).id}</small></span><span>${money(totals.venueTax)}</span></div>${selectedVendors.map(item => `<div class="price-line"><span>${item.vendor} tax<small>${item.taxProfile.id}</small></span><span>${money(taxFor(servicePrice(item), item.taxProfile))}</span></div>`).join("")}<div class="price-line"><span>Total supplier taxes</span><span>${money(totals.tax)}</span></div><div class="price-line total"><span>Services total</span><span>${money(totals.servicesTotal)}</span></div>${totals.deposit ? `<div class="price-line"><span>Refundable security deposit</span><span>${money(totals.deposit)}</span></div>` : ""}<div class="price-line due"><span>Total due today (CAD)</span><span>${money(totals.dueNow)}</span></div></div></aside>`;
 }
 function eventForm() { return `<div class="booking-panel"><div class="form-card"><h2>Add event details</h2><p>Tell the venue team what you’re planning and confirm that it follows the venue rules.</p><form id="event-form"><div class="form-grid"><div class="form-group"><label for="event-type">Type of event</label><select id="event-type"><option>${escapeHtml(bookingData.event)}</option><option>Meeting or workshop</option><option>Class or program</option><option>Wedding or reception</option></select></div><div class="form-group"><label for="headcount">Number of attendees</label><input id="headcount" type="number" value="${bookingData.guests}" min="1" max="${currentSpace().capacity}" required></div><div class="form-group"><label for="name">Booking contact</label><input id="name" value="${escapeHtml(bookingData.contact)}" required></div><div class="form-group"><label for="email">Confirmation email</label><input id="email" type="email" value="${escapeHtml(bookingData.email)}" required></div><div class="form-group full"><label for="details">Event notes (optional)</label><textarea id="details" rows="4" placeholder="Share setup, activities, or accessibility requirements…">${escapeHtml(bookingData.notes)}</textarea></div></div><button class="button button-green" type="submit">Continue to add-ons →</button></form></div>${summaryCard()}</div>`; }
+function vendorOfferCard(item) {
+  const status = vendorAvailability(item);
+  const selected = bookingData.vendorServices.includes(item.id);
+  const cateringDetails = item.serviceType === "catering" ? `<div class="offer-tags">${item.cuisines.map(value => `<span>${value}</span>`).join("")}${item.menuStyles.map(value => `<span>Menu: ${value}</span>`).join("")}${item.servingStyles.map(value => `<span>${value}</span>`).join("")}${item.dietary.map(value => `<span>${value}</span>`).join("")}</div><p class="allergen-note"><strong>Allergy handling:</strong> ${item.allergenNote}</p><small class="delivery-window">Delivery/setup: ${item.deliveryWindow}</small>` : "";
+  const statusHeading = !status.available ? "Unavailable for this booking" : status.confirmationRequested ? "Vendor response pending" : status.requiresConfirmation ? "Vendor confirmation required" : status.confirmed ? "✓ Vendor-confirmed for these requirements" : "✓ Available and compatible";
+  return `<label class="vendor-offer-card ${status.available ? "available" : "unavailable"} ${status.requiresConfirmation ? "confirmation-required" : ""} ${selected ? "selected" : ""}">
+    <input class="vendor-radio" type="radio" name="vendor-${item.serviceType}" value="${item.id}" data-service-type="${item.serviceType}" ${selected ? "checked" : ""} ${status.available ? "" : "disabled"}>
+    <span class="offer-card-content"><span class="offer-card-top"><span><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${item.name}</strong><small>${item.vendor}</small></span><span class="offer-price"><strong>${money(servicePrice(item))}</strong><small>${servicePriceBreakdown(item)}</small></span></span>
+    <span class="offer-rating" aria-label="${item.rating} out of 5 from ${item.reviewCount} verified prototype bookings"><span aria-hidden="true">★</span> ${item.rating.toFixed(1)} <small>(${item.reviewCount} verified reviews)</small></span>
+    <span class="offer-description">${item.description}</span><span class="offer-inclusions">${item.inclusions.map(value => `<span>✓ ${value}</span>`).join("")}</span>
+    <span class="offer-facts"><span>Capacity: ${item.minGuests}–${item.maxGuests}; requested ${serviceQuantity(item)}</span><span>Lead time: ${item.minLeadDays}+ days</span><span>Provider hold: ${formatTime(bookingData.start)}–${formatTime(bookingData.end)} · setup/teardown included</span></span>${cateringDetails}
+    <span class="cancellation-summary"><strong>Cancellation & changes:</strong> ${cancellationPolicyFor(item)}</span>
+    <span class="offer-status ${status.available ? status.requiresConfirmation ? "pending" : "" : "blocked"}"><strong>${statusHeading}</strong><small>${status.message}</small></span></span>
+  </label>`;
+}
+
+function vendorComparisonGroup(type) {
+  const allOfferings = vendorServices.filter(service => service.serviceType === type.id);
+  const matchingOfferings = type.id === "catering" ? allOfferings.filter(vendorMatchesCateringPreferences) : allOfferings;
+  let visibleOfferings = [...matchingOfferings];
+  const hiddenSelected = allOfferings.find(service => bookingData.vendorServices.includes(service.id) && !visibleOfferings.includes(service));
+  if (hiddenSelected) visibleOfferings = [hiddenSelected, ...visibleOfferings];
+  const offerings = sortedVendorServices(visibleOfferings);
+  const selected = bookingData.vendorServices.some(id => allOfferings.some(service => service.id === id));
+  const quantityControl = ["face-painting", "cake"].includes(type.id) ? `<label class="vendor-quantity">${type.id === "cake" ? "Servings needed" : "Participants to serve"}<input class="vendor-quantity-input" data-quantity-type="${type.id}" type="number" min="1" max="${bookingData.guests}" value="${bookingData.vendorQuantities[type.id] || bookingData.guests}"><small>Event attendance: ${bookingData.guests}</small></label>` : "";
+  return `<fieldset class="vendor-compare-group"><legend>${type.label}</legend><div class="vendor-group-head"><div><p>${type.description}</p><small>${matchingOfferings.length} matching package${matchingOfferings.length === 1 ? "" : "s"} · one package may be selected in this group</small></div><div class="vendor-group-actions">${quantityControl}<label class="skip-service"><input class="vendor-radio" type="radio" name="vendor-${type.id}" value="" data-service-type="${type.id}" ${selected ? "" : "checked"}> Skip ${type.label.toLowerCase()}</label></div></div><div class="vendor-card-grid">${offerings.map(vendorOfferCard).join("") || `<div class="no-vendor-match"><strong>No catering packages match every filter.</strong><span>Change cuisine, dietary, allergy-review, or serving-style filters to compare more providers.</span></div>`}</div></fieldset>`;
+}
+
+function cateringFilterPanel(preferences) {
+  const dietaryOptions = ["Vegetarian", "Vegan", "Halal", "Gluten-aware"];
+  const allergyOptions = [{ value: "nut", label: "Nut / cross-contact" }, { value: "gluten", label: "Gluten / celiac" }, { value: "dairy", label: "Dairy" }];
+  return `<section class="catering-filter-panel" aria-labelledby="catering-filter-title"><div><span class="vendor-category">Catering requirements</span><h3 id="catering-filter-title">Find a catering package that fits</h3><p>Select every requirement that applies. Capabilities are vendor-reported; material allergy requests require written vendor confirmation before payment because shared-kitchen cross-contact may remain possible.</p></div><div class="catering-filter-grid"><label>Cuisine<select id="catering-cuisine"><option value="any" ${preferences.cuisine === "any" ? "selected" : ""}>Any cuisine</option><option value="Canadian" ${preferences.cuisine === "Canadian" ? "selected" : ""}>Canadian</option><option value="Indian" ${preferences.cuisine === "Indian" ? "selected" : ""}>Indian</option><option value="South Asian" ${preferences.cuisine === "South Asian" ? "selected" : ""}>South Asian</option><option value="Italian" ${preferences.cuisine === "Italian" ? "selected" : ""}>Italian</option><option value="Mediterranean" ${preferences.cuisine === "Mediterranean" ? "selected" : ""}>Mediterranean</option></select></label><label>Menu preference<select id="catering-menu"><option value="any" ${preferences.menu === "any" ? "selected" : ""}>Any menu</option><option value="Classic comfort" ${preferences.menu === "Classic comfort" ? "selected" : ""}>Classic / comfort</option><option value="Kids-friendly" ${preferences.menu === "Kids-friendly" ? "selected" : ""}>Kids-friendly</option><option value="Vegetarian-forward" ${preferences.menu === "Vegetarian-forward" ? "selected" : ""}>Vegetarian-forward</option><option value="South Asian" ${preferences.menu === "South Asian" ? "selected" : ""}>South Asian menu</option><option value="Italian" ${preferences.menu === "Italian" ? "selected" : ""}>Italian menu</option></select></label><fieldset class="filter-check-group"><legend>Dietary support · choose all</legend><div>${dietaryOptions.map(value => `<label><input class="catering-dietary" type="checkbox" value="${value}" ${preferences.dietary.includes(value) ? "checked" : ""}> ${value}</label>`).join("")}</div></fieldset><fieldset class="filter-check-group"><legend>Allergy review · choose all</legend><div>${allergyOptions.map(option => `<label><input class="catering-allergy" type="checkbox" value="${option.value}" ${preferences.allergies.includes(option.value) ? "checked" : ""}> ${option.label}</label>`).join("")}</div></fieldset><label>Serving style<select id="catering-style"><option value="any" ${preferences.servingStyle === "any" ? "selected" : ""}>Any serving style</option><option value="Buffet" ${preferences.servingStyle === "Buffet" ? "selected" : ""}>Buffet</option><option value="Drop-off" ${preferences.servingStyle === "Drop-off" ? "selected" : ""}>Drop-off</option><option value="Family-style" ${preferences.servingStyle === "Family-style" ? "selected" : ""}>Family-style</option><option value="Plated" ${preferences.servingStyle === "Plated" ? "selected" : ""}>Plated</option></select></label><label class="full">Dietary/allergy notes for vendor confirmation<textarea id="catering-notes" rows="2" placeholder="Example: one guest has a severe peanut allergy; confirm ingredients and cross-contact controls.">${escapeHtml(preferences.notes)}</textarea></label></div></section>`;
+}
+
 function addonForm() {
-  const vendorOptions = vendorServices.map(item => {
-    const status = vendorAvailability(item);
-    return `<label class="option vendor-option ${status.available ? "" : "unavailable"}"><span><input class="vendor-checkbox" type="checkbox" value="${item.id}" ${bookingData.vendorServices.includes(item.id) && status.available ? "checked" : ""} ${status.available ? "" : "disabled"}> <span class="option-copy"><span class="vendor-category">${item.category}</span><strong>${item.name}</strong><small>${item.vendor} · ${item.description}</small><small class="vendor-availability">${status.available ? "✓" : "!"} ${status.message}</small></span></span><span class="option-price">${status.available ? `+${money(item.price)}` : "Unavailable"}</span></label>`;
-  }).join("");
-  return `<div class="booking-panel"><div class="form-card"><h2>Choose add-ons and services</h2><p>Included amenities, venue add-ons, and independent vendor services are shown separately so you know who provides each item.</p><div class="included-panel"><strong>Included in the hourly rate</strong><div class="amenities included">${currentSpace().included.map(item => `<span>✓ ${item}</span>`).join("")}</div></div><form id="addon-form"><h3 class="form-subheading">Venue add-ons</h3><p class="form-help">Provided and invoiced by ${currentSpace().name}.</p><div class="option-list">${currentAddons().map(item => `<label class="option ${item.available ? "" : "unavailable"}"><span><input class="addon-checkbox" type="checkbox" value="${item.id}" ${bookingData.addons.includes(item.id) ? "checked" : ""} ${item.available ? "" : "disabled"}> <span class="option-copy"><strong>${item.name}</strong><small>${item.description}</small></span></span><span class="option-price">${item.available ? `+${money(item.price)}` : "Not available"}</span></label>`).join("")}</div><h3 class="form-subheading">Optional services from local vendors</h3><p class="form-help">Each service is provided and invoiced by the named independent provider. Availability is specific to your date and time and is rechecked before payment. Gather does not add vendor commission as a separate customer charge.</p><div class="option-list vendor-options">${vendorOptions}</div><button class="button button-light" type="button" id="booking-back">← Back</button> <button class="button button-green" type="submit">Review and pay →</button></form></div>${summaryCard()}</div>`;
+  const preferences = bookingData.cateringPreferences;
+  const vendorGroups = vendorServiceTypes.map(vendorComparisonGroup).join("");
+  const vendorStatus = selectedVendorAvailability();
+  const pendingConfirmation = vendorStatus.pendingConfirmations[0];
+  const confirmationRequestSent = pendingConfirmation && hasCurrentAllergyConfirmationRequest(pendingConfirmation);
+  return `<div class="booking-panel vendor-booking-panel"><div class="form-card"><h2>Choose add-ons and compare providers</h2><p>Included amenities, venue add-ons, and independent vendor packages are separated so you can compare availability, total price, ratings, reviews, and what each supplier provides.</p><div class="included-panel"><strong>Included in the hourly rate</strong><div class="amenities included">${currentSpace().included.map(item => `<span>✓ ${item}</span>`).join("")}</div></div><form id="addon-form"><h3 class="form-subheading">Venue add-ons</h3><p class="form-help">Provided and invoiced by ${currentSpace().name}.</p><div class="option-list">${currentAddons().map(item => `<label class="option ${item.available ? "" : "unavailable"}"><span><input class="addon-checkbox" type="checkbox" value="${item.id}" ${bookingData.addons.includes(item.id) ? "checked" : ""} ${item.available ? "" : "disabled"}> <span class="option-copy"><strong>${item.name}</strong><small>${item.description}</small></span></span><span class="option-price">${item.available ? `+${money(item.price)}` : "Not available"}</span></label>`).join("")}</div>
+    <div class="vendor-marketplace-head"><div><span class="eyebrow">Independent event-service marketplace</span><h3>Compare providers by offering</h3><p>Cheaper unavailable packages stay visible. Best match prioritizes booking fit and availability—not Gather commission. All ratings and reviews are fictional prototype data.</p></div><label>Sort providers<select id="vendor-sort"><option value="best-match" ${vendorSort === "best-match" ? "selected" : ""}>Best match</option><option value="price" ${vendorSort === "price" ? "selected" : ""}>Price: low to high</option><option value="rating" ${vendorSort === "rating" ? "selected" : ""}>Rating: high to low</option></select></label></div>
+    ${cateringFilterPanel(preferences)}
+    <p id="vendor-filter-status" class="visually-hidden" role="status" aria-live="polite"></p><div class="vendor-comparison">${vendorGroups}</div><div class="vendor-policy-note"><strong>Independent suppliers</strong><span>Every selected provider remains responsible for its package, visible cancellation terms, availability, fulfilment, tax profile, and supplier invoice. Gather does not add its vendor commission as a separate customer charge.</span></div>${pendingConfirmation ? `<div class="confirmation-gate"><div><strong>${confirmationRequestSent ? "Vendor response pending" : "Written allergy confirmation required"}</strong><span>${confirmationRequestSent ? `The request was sent to ${pendingConfirmation.vendor}. Payment remains blocked until that vendor responds.` : `${pendingConfirmation.vendor} must confirm the selected allergy and cross-contact requirements before its order can be paid and confirmed.`}</span>${confirmationRequestSent ? '<small class="prototype-note">Prototype test control: the next action simulates a response from an authenticated vendor user. Organizers cannot approve their own request in production.</small>' : ""}</div>${confirmationRequestSent ? `<button class="button button-dark" type="button" id="simulate-vendor-confirmation" data-service-id="${pendingConfirmation.id}">Simulate vendor-confirmed response</button>` : `<button class="button button-dark" type="button" id="request-vendor-confirmation" data-service-id="${pendingConfirmation.id}">Send confirmation request</button>`}</div>` : ""}<div class="booking-actions"><button class="button button-light" type="button" id="booking-back">← Back</button><button class="button button-green" type="submit" ${vendorStatus.ready ? "" : "disabled"}>${vendorStatus.ready ? "Review and pay →" : pendingConfirmation ? "Await vendor confirmation" : "Resolve selected service"}</button></div></form></div>${summaryCard()}</div>`;
 }
 
 function reviewForm() {
@@ -481,12 +705,36 @@ function reviewForm() {
   const selectedAddons = currentAddons().filter(item => bookingData.addons.includes(item.id));
   const vendors = selectedVendorServices();
   const vendorStatus = selectedVendorAvailability();
-  return `<div class="booking-panel"><div class="form-card"><h2>Review and pay</h2><p>${vendorStatus.available ? "The venue and every selected vendor currently show available. We’ll recheck all of them once more when you confirm and pay." : "One or more selected vendor services is no longer available. Return to add-ons before payment."}</p><div class="content-block"><h3>Booking details</h3><p><strong>${bookingData.event}</strong><br>${bookingData.guests} attendees · ${formatTime(bookingData.start)}–${formatTime(bookingData.end)}</p></div><div class="content-block"><h3>Venue add-ons</h3><p>${selectedAddons.length ? selectedAddons.map(item => `✓ ${item.name}`).join("<br>") : "No venue add-ons selected."}</p></div><div class="content-block"><h3>Independent vendor services</h3>${vendors.length ? vendors.map(item => { const status = vendorAvailability(item); return `<p><strong>${item.name}</strong><br>${item.vendor} · ${money(item.price)} plus tax under ${item.taxProfile.id}<br><span class="mini-status ${status.available ? "" : "pending"}">${status.available ? "✓" : "!"} ${status.message}</span></p>`; }).join("") : "<p>No independent vendor services selected.</p>"}<p class="block-note">Gather does not add vendor commission as a separate customer charge. Each supplier controls its listed service price.</p></div><div class="content-block"><h3>Security deposit</h3><p>${totals.deposit ? `${money(totals.deposit)} is collected separately at checkout for this sample booking. After the event, the venue team follows its configured deadline to release it or submit an itemized claim with evidence.` : "No security deposit is required for this space."}</p></div><div class="payment-panel"><div><span class="secure-icon">🔒</span><strong>Payment details (prototype)</strong><small>Demo only — no card details are collected or processed.</small></div><div class="mock-card-field">Card number &nbsp; •••• •••• •••• 4242</div><div class="mock-card-row"><span>Expiry &nbsp; 12/29</span><span>CVC &nbsp; •••</span></div><p class="prototype-note">This interactive prototype does not create a charge or reservation.</p></div><label class="option terms"><span><input id="agree" type="checkbox" required> &nbsp; I agree to the venue rules, vendor terms, cancellation policies, and security-deposit policy when applicable.</span></label><div style="margin-top:24px"><button class="button button-light" id="booking-back">← Back</button> <button class="button button-green" id="confirm-booking">Confirm and pay ${cadMoney(totals.dueNow)}</button></div></div>${summaryCard()}</div>`;
+  const vendorReview = vendors.map(item => {
+    const status = vendorAvailability(item);
+    const subtotal = servicePrice(item);
+    const supplierTax = taxFor(subtotal, item.taxProfile);
+    const preferences = bookingData.cateringPreferences;
+    const cateringConfiguration = item.serviceType === "catering" ? `<small>Catering request: ${preferences.cuisine === "any" ? "any listed cuisine" : preferences.cuisine} · ${preferences.menu === "any" ? "any listed menu" : preferences.menu} · ${preferences.servingStyle === "any" ? "any serving style" : preferences.servingStyle} · ${preferences.dietary.length ? preferences.dietary.join(", ") : "no dietary filter"}${preferences.allergies.length ? ` · allergy review: ${preferences.allergies.join(", ")}` : ""}</small>${preferences.notes ? `<small>Organizer note: ${escapeHtml(preferences.notes)}</small>` : ""}` : "";
+    const quantityConfiguration = ["face-painting", "cake"].includes(item.serviceType) ? `<small>Selected quantity: ${serviceQuantity(item)} ${item.serviceType === "cake" ? "servings" : "participants"}</small>` : "";
+    return `<article class="review-vendor-order"><div><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${item.name}</strong><small>${item.vendor} · ${item.rating.toFixed(1)} ★ from ${item.reviewCount} verified prototype reviews</small>${item.pricing.type === "per_person" ? `<small>Pricing basis: ${servicePriceBreakdown(item)}</small>` : ""}${quantityConfiguration}${cateringConfiguration}<small><strong>Cancellation & changes:</strong> ${cancellationPolicyFor(item)}</small></div><div class="review-vendor-money"><span>${money(subtotal)}</span><small>${item.taxProfile.label}: ${money(supplierTax)}</small><strong>${money(subtotal + supplierTax)} supplier total</strong></div><span class="mini-status ${status.available && !status.requiresConfirmation ? "" : "pending"}">${status.available && !status.requiresConfirmation ? "✓" : "!"} ${status.message}</span></article>`;
+  }).join("");
+  return `<div class="booking-panel"><div class="form-card"><h2>Review and pay</h2><p>${vendorStatus.ready ? "The venue and every selected vendor currently show available and compatible. Any disclosed allergy review has vendor confirmation. We’ll recheck all service windows once more when you confirm and pay." : "One or more selected vendor service is unavailable or still needs written confirmation. Return to provider comparison before payment."}</p><div class="content-block"><h3>Booking details</h3><p><strong>${bookingData.event}</strong><br>${bookingData.guests} attendees · ${formatTime(bookingData.start)}–${formatTime(bookingData.end)}</p></div><div class="content-block"><h3>Venue add-ons</h3><p>${selectedAddons.length ? selectedAddons.map(item => `✓ ${item.name}`).join("<br>") : "No venue add-ons selected."}</p></div><div class="content-block"><h3>Independent vendor orders</h3>${vendors.length ? vendorReview : "<p>No independent vendor services selected.</p>"}<p class="block-note">Each provider issues a separate supplier invoice. Package-specific cancellation summaries are shown above; Gather’s seller-funded commission is not added as a separate customer charge.</p></div><div class="content-block"><h3>Security deposit</h3><p>${totals.deposit ? `${money(totals.deposit)} is collected separately at checkout for this sample booking. After the event, the venue team follows its configured deadline to release it or submit an itemized claim with evidence.` : "No security deposit is required for this space."}</p></div><div class="payment-panel"><div><span class="secure-icon">🔒</span><strong>Payment details (prototype)</strong><small>Demo only — no card details are collected or processed.</small></div><div class="mock-card-field">Card number &nbsp; •••• •••• •••• 4242</div><div class="mock-card-row"><span>Expiry &nbsp; 12/29</span><span>CVC &nbsp; •••</span></div><p class="prototype-note">This interactive prototype does not create a charge or reservation.</p></div><label class="option terms"><span><input id="agree" type="checkbox" required> &nbsp; I reviewed and agree to the venue rules, the visible package-specific vendor cancellation/change terms, and the security-deposit policy when applicable.</span></label><div style="margin-top:24px"><button class="button button-light" id="booking-back">← Back</button> <button class="button button-green" id="confirm-booking" ${vendorStatus.ready ? "" : "disabled"}>${vendorStatus.ready ? `Confirm and pay ${cadMoney(totals.dueNow)}` : "Return to provider comparison"}</button></div></div>${summaryCard()}</div>`;
 }
 function successPage() {
   const snapshot = confirmedBookingSnapshot || createBookingSnapshot();
   const vendorCount = snapshot.vendors.length;
   return `<div class="success-card"><div class="success-icon">✓</div><span class="eyebrow">Demo booking · ${snapshot.bookingId}</span><h1>Payment received. Booking confirmed.</h1><span class="status-pill confirmed">Confirmed</span><p>${snapshot.space.name} would be reserved for ${new Date(snapshot.booking.date + "T12:00:00").toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" })} from ${formatTime(snapshot.booking.start)} to ${formatTime(snapshot.booking.end)}</p><p><strong>Demo total:</strong> ${money(snapshot.totals.dueNow)} CAD${snapshot.totals.deposit ? `, including the separate ${money(snapshot.totals.deposit)} refundable security deposit` : ""}.</p><div class="confirmation-docs"><strong>Documents available now</strong><span>✓ Venue supplier invoice</span>${vendorCount ? `<span>✓ ${vendorCount} vendor supplier invoice${vendorCount === 1 ? "" : "s"}</span>` : ""}<span>✓ Payment receipt</span>${snapshot.totals.deposit ? "<span>✓ Security-deposit record</span>" : ""}</div><p>Your Final Booking Statement would be created after the event, when supplier fulfilment, adjustments, and the deposit outcome are resolved.</p><p><strong>Prototype only:</strong> no charge, email, or real reservation was created.</p><div class="button-row"><button class="button button-green" data-route="booking-documents">View booking documents</button><button class="button button-light" data-route="home">Browse more spaces</button></div></div>`;
+}
+
+function vendorInvoiceDocument(item, snapshot) {
+  const vendorTax = taxFor(item.price, item.taxProfile);
+  const selectedConfiguration = item.selectedConfiguration || {};
+  const quantityConfiguration = ["face-painting", "cake"].includes(item.serviceType)
+    ? `<div class="key-value"><span>Selected quantity</span><strong>${selectedConfiguration.quantity} ${item.serviceType === "cake" ? "servings" : "participants"}</strong></div>`
+    : "";
+  const dietaryRequirements = selectedConfiguration.dietaryRequirements || [];
+  const allergyRequirements = selectedConfiguration.allergyRequirements || [];
+  const cateringConfiguration = item.serviceType === "catering" ? `<div class="key-value"><span>Guests</span><strong>${selectedConfiguration.guests}</strong></div><div class="key-value"><span>Cuisine / menu / style</span><strong>${selectedConfiguration.cuisine === "any" ? "Any listed cuisine" : selectedConfiguration.cuisine} · ${selectedConfiguration.menu === "any" ? "Any listed menu" : selectedConfiguration.menu} · ${selectedConfiguration.servingStyle === "any" ? "Any listed style" : selectedConfiguration.servingStyle}</strong></div><div class="key-value"><span>Dietary requirements</span><strong>${dietaryRequirements.length ? dietaryRequirements.join(", ") : "None selected"}</strong></div><div class="key-value"><span>Allergy review</span><strong>${allergyRequirements.length ? `${allergyRequirements.join(", ")} · vendor-confirmed` : "None requested"}</strong></div>${selectedConfiguration.notes ? `<p>Organizer note: ${escapeHtml(selectedConfiguration.notes)}</p>` : ""}<p>${escapeHtml(item.allergenNote)}</p>` : "";
+  const setupMinutes = item.serviceWindow?.setupMinutes || 0;
+  const teardownMinutes = item.serviceWindow?.teardownMinutes || 0;
+  const confirmation = item.allergyConfirmation ? `<div class="key-value"><span>Requirement confirmation</span><strong>${item.allergyConfirmation.status} · ${item.allergyConfirmation.source}</strong></div>` : "";
+  return `<article class="statement-sheet"><div class="statement-head"><div><span class="document-type">Supplier invoice · Independent vendor</span><h2>${item.vendor}</h2><p>Invoice INV-${item.invoicePrefix}-${snapshot.reference} · Issued at booking · ${item.taxProfile.id}</p></div><strong>${money(item.price + vendorTax)}</strong></div><div class="statement-section"><div class="key-value"><span>Bill to</span><strong>${escapeHtml(snapshot.booking.contact)}</strong></div></div><div class="money-table"><div><span>${item.name}</span><span>${money(item.price)}</span></div><div><span>${item.taxProfile.label}</span><span>${money(vendorTax)}</span></div><div class="money-total"><span>Vendor invoice total</span><span>${money(item.price + vendorTax)}</span></div></div><div class="statement-section"><h3>Saved service configuration</h3><div class="key-value"><span>Pricing basis</span><strong>${item.pricingBasis}</strong></div><div class="key-value"><span>Provider hold</span><strong>${item.serviceWindow.start}–${item.serviceWindow.end}</strong></div><div class="key-value"><span>Setup / teardown inside hold</span><strong>${setupMinutes} / ${teardownMinutes} minutes</strong></div>${quantityConfiguration}${cateringConfiguration}${confirmation}<p><strong>Cancellation & changes:</strong> ${item.cancellationPolicy}</p></div><p class="document-footnote">Gather does not add vendor commission as a separate customer charge. The vendor’s commercial fee is documented in its own settlement.</p></article>`;
 }
 
 function bookingDocumentsPage() {
@@ -502,7 +750,7 @@ function bookingDocumentsPage() {
   const venueInvoiceNumber = snapshot.venueInvoiceNumber;
   return `<section class="document-page"><div class="document-wrap"><button class="back-link" data-route="booking">← Back to confirmation</button><div class="document-title-row"><div><span class="eyebrow">Customer documents · ${snapshot.bookingId}</span><h1>Booking documents</h1><p>Immutable payment-success snapshot: separate supplier invoices plus one grouped receipt.</p></div><span class="status-pill confirmed">Payment recorded</span></div><div class="document-notice"><strong>Why separate invoices?</strong><span>The venue and each independent vendor are separate suppliers. Gather groups payment for convenience while preserving who sold each service.</span></div>
     <article class="statement-sheet"><div class="statement-head"><div><span class="document-type">Supplier invoice</span><h2>${snapshot.space.operator}</h2><p>${venueInvoiceNumber} · trading as ${snapshot.space.name} · ${venueTaxProfile.id}</p></div><strong>${money(venueInvoiceTotal)}</strong></div><div class="statement-section"><div class="key-value"><span>Bill to</span><strong>${escapeHtml(snapshot.booking.contact)}</strong></div><div class="key-value"><span>Confirmation email</span><strong>${escapeHtml(snapshot.booking.email)}</strong></div></div><div class="money-table"><div><span>Space rental</span><span>${money(totals.rental)}</span></div>${selectedAddons.map(item => `<div><span>${item.name}</span><span>${money(item.price)}</span></div>`).join("")}<div><span>${venueTaxProfile.label}</span><span>${money(totals.venueTax)}</span></div><div class="money-total"><span>Venue invoice total</span><span>${money(venueInvoiceTotal)}</span></div></div><p class="document-footnote">Prototype supplier identity and tax profile. A production invoice would also include the configured address, registration number, issue date, and payment terms.</p></article>
-    ${vendors.map(item => { const vendorTax = taxFor(item.price, item.taxProfile); return `<article class="statement-sheet"><div class="statement-head"><div><span class="document-type">Supplier invoice · Independent vendor</span><h2>${item.vendor}</h2><p>Invoice INV-${item.invoicePrefix}-${snapshot.reference} · Issued at booking · ${item.taxProfile.id}</p></div><strong>${money(item.price + vendorTax)}</strong></div><div class="statement-section"><div class="key-value"><span>Bill to</span><strong>${escapeHtml(snapshot.booking.contact)}</strong></div></div><div class="money-table"><div><span>${item.name}</span><span>${money(item.price)}</span></div><div><span>${item.taxProfile.label}</span><span>${money(vendorTax)}</span></div><div class="money-total"><span>Vendor invoice total</span><span>${money(item.price + vendorTax)}</span></div></div><p class="document-footnote">Gather does not add vendor commission as a separate customer charge. The vendor’s commercial fee is documented in its own settlement.</p></article>`; }).join("")}
+    ${vendors.map(item => vendorInvoiceDocument(item, snapshot)).join("")}
     <article class="statement-sheet"><div class="statement-head"><div><span class="document-type">Payment receipt</span><h2>Gather checkout</h2><p>Receipt ${snapshot.receiptNumber} · Demo transaction •••• 4242</p></div><strong>${money(totals.dueNow)}</strong></div><div class="money-table"><div><span>Supplier invoices paid</span><span>${money(totals.servicesTotal)}</span></div>${totals.deposit ? `<div><span>Refundable security deposit held separately</span><span>${money(totals.deposit)}</span></div>` : ""}<div class="money-total"><span>Total payment recorded</span><span>${money(totals.dueNow)}</span></div></div><p class="document-footnote">Prototype only. No invoice, receipt, charge, or reservation was actually created. Snapshot event note: ${escapeHtml(snapshot.booking.notes || "None supplied")}</p></article>
     <div class="document-actions"><button class="button button-light" data-document="Booking document download simulated">Download all (demo)</button><button class="button button-dark" data-route="sign-in">Explore demo accounts</button></div></div></section>`;
 }
@@ -821,7 +1069,11 @@ function platformDashboardPage() {
   const isFinance = hasPermission("platform.finance");
   const canEditPolicy = hasPermission("platform.policy");
   const isOps = hasPermission("platform.marketplace") || hasPermission("platform.support");
-  const content = `<header class="dash-head"><div><span class="eyebrow">Gather platform console · ${role.shortRole}</span><h1>Platform operations</h1><p>Cross-organization health is kept separate from customer, venue, and vendor workspaces.</p></div><div class="avatar">${role.initials}</div></header>${roleContextNotice()}<div class="metric-grid"><div class="metric"><span>Active operators</span><strong>18</strong><em>Sample pilot data</em></div><div class="metric"><span>Active vendors</span><strong>27</strong><em>8 categories</em></div><div class="metric"><span>${isFinance ? "Reconciliation exceptions" : "Onboarding reviews"}</span><strong>${isFinance ? "3" : "6"}</strong><em>${isFinance ? "Needs investigation" : "Oldest: 2 days"}</em></div><div class="metric"><span>${isOps ? "Support queue" : "Fee documents"}</span><strong>${isOps ? "9" : "14"}</strong><em>${isOps ? "2 high priority" : "Current settlement cycle"}</em></div></div><div class="platform-grid"><section class="dash-card"><div class="card-heading-row"><div><h3>${isFinance ? "Money-movement controls" : "Marketplace and support"}</h3><p>Only queues permitted for this role are shown.</p></div>${canEditPolicy ? '<button class="text-button" data-route="fee-settings">Commercial terms</button>' : ""}</div>${isFinance ? `<div class="platform-queue"><span class="task-icon">◇</span><div><strong>Processor-to-ledger mismatch</strong><small>CHG-1033 · grouped payment allocations require review</small></div><button data-task="Reconciliation case opened">Review</button></div><div class="platform-queue"><span class="task-icon">$</span><div><strong>Transfer not generated</strong><small>PST-WSE-1033 · approval and transfer are separate states</small></div><button data-task="Transfer exception opened">Review</button></div>` : ""}${isOps ? `<div class="platform-queue"><span class="task-icon">▱</span><div><strong>Operator onboarding</strong><small>2 listings need identity or payout-readiness checks</small></div><button data-task="Operator onboarding queue opened">Review</button></div><div class="platform-queue"><span class="task-icon">✦</span><div><strong>Vendor credentials</strong><small>Food service and personal-service records due</small></div><button data-task="Vendor credential queue opened">Review</button></div><div class="platform-queue"><span class="task-icon">↻</span><div><strong>Calendar sync exception</strong><small>Communal update requires operator follow-up</small></div><button data-task="Synchronization exception opened">Review</button></div>` : ""}</section><aside class="dash-card"><h3>Privileged-access boundary</h3><p>Platform roles do not silently become customers, venue staff, or vendors. Any future support access should be reason-coded, time-limited, approved where required, and fully audited.</p><div class="policy-callout"><strong>Booking snapshots remain immutable</strong><span>A new commercial-policy version cannot rewrite an existing booking’s saved supplier, tax, or fee terms.</span></div><button class="button button-light button-wide" data-route="sign-in">Compare another demo role</button></aside></div>`;
+  const isSuperAdmin = role.id === "platform-admin";
+  const deposit = depositStatus();
+  const supportPanel = supportSession ? `<div class="support-session active"><div><span class="status-pill confirmed">Read-only support session active</span><h3>${supportSession.target}</h3><p><strong>${supportSession.actor}</strong> remains the identified platform actor · ${supportSession.caseId} · ${supportSession.reason}</p><small>Started ${formatSupportTimestamp(supportSession.startedAt)} · expires ${formatSupportTimestamp(supportSession.expiresAt)}. Passwords, API keys, full payment credentials, bank details, tax identifiers, refunds, payout edits, deposit decisions, and role changes remain unavailable.</small></div><button class="button button-dark" type="button" id="end-support-session">End access</button></div>` : `<form class="support-session-form" id="support-session-form"><div><span class="vendor-category">Controlled support access</span><h3>Start a read-only support session</h3><p>This does not switch identities. The platform administrator remains visible as the actor and the session is added to the audit history.</p></div><div class="support-form-grid"><label>Support case<input id="support-case" value="SUP-2104" pattern="[A-Za-z]+-[0-9]+" required></label><label>Organization<select id="support-target"><option>Ridgeview Community Association</option><option>WonderSpark Entertainment</option><option>Crestwood Community Association</option></select></label><label>Reason<select id="support-reason"><option>Investigate booking issue</option><option>Assist with listing configuration</option><option>Review calendar synchronization</option><option>Investigate payment reconciliation</option></select></label><label>Expires after<select id="support-duration"><option value="15">15 minutes</option><option value="30" selected>30 minutes</option></select></label></div><button class="button button-dark" type="submit">Start audited read-only session</button></form>`;
+  const adminModules = isSuperAdmin ? `<section class="super-admin-area"><div class="super-admin-title"><div><span class="eyebrow">Platform administrator · super admin</span><h2>Global oversight with controlled access</h2><p>Representative cross-organization records are visible for operations and support. Sensitive credentials remain masked, and tenant changes require a permitted workflow rather than silent impersonation.</p></div><span class="read-only-label">Sample data</span></div><div class="admin-module-grid"><article class="dash-card admin-wide"><div class="card-heading-row"><div><h3>Organizations and access</h3><p>Operator and vendor status, membership count, catalog size, and payout readiness.</p></div><button class="text-button" data-task="Organization directory filters opened">Filter directory</button></div><div class="admin-table" role="table" aria-label="Sample organizations"><div class="admin-table-head" role="row"><span>Organization</span><span>Type</span><span>Members</span><span>Supply</span><span>Status</span></div><div role="row"><strong>Ridgeview Community Association</strong><span>Space operator</span><span>5</span><span>1 listing</span><span class="mini-status">Active · payout ready</span></div><div role="row"><strong>WonderSpark Entertainment</strong><span>Vendor</span><span>3</span><span>4 packages</span><span class="mini-status">Active · payout ready</span></div><div role="row"><strong>Crestwood Community Association</strong><span>Space operator</span><span>4</span><span>1 listing</span><span class="mini-status pending">Credential review</span></div></div></article><article class="dash-card"><h3>Linked booking and vendor orders</h3><div class="admin-record"><strong>BKG-1033 · completed</strong><span>Ridgeview Community Hall</span><small>Customer contact and private event notes redacted by default</small><div><span>Venue invoice paid</span><span>Vendor order fulfilled</span><span>Deposit · ${deposit.label}</span></div></div><div class="admin-record"><strong>BKG-1048 · confirmed</strong><span>Ridgeview Community Hall · October 17</span><small>Selected supplier orders remain legally and financially separate</small><div><span>Venue confirmed</span><span>1 vendor order</span><span>Deposit held</span></div></div></article><article class="dash-card"><h3>Money and deposit health</h3><div class="terms-list"><div><span>Processor-to-ledger exceptions</span><strong>3</strong></div><div><span>Transfers awaiting approval</span><strong>2</strong></div><div><span>Deposits held</span><strong>${moneyExact(18400)}</strong></div><div><span>Customer responses due</span><strong>4</strong></div></div><p class="document-footnote">Deposits are held customer funds, not platform revenue. Full bank, card, and tax credentials are never displayed here.</p></article><article class="dash-card admin-wide">${supportPanel}</article><article class="dash-card admin-wide"><div class="card-heading-row"><div><h3>Recent privileged-access audit</h3><p>Actor, reason, scope, time window, target, case, and outcome remain attributable.</p></div><span class="read-only-label">Append-only demo</span></div><div class="audit-list">${supportAuditEvents.map(event => `<div><span>${event.timestamp ? formatSupportTimestamp(event.timestamp) : event.time}</span><strong>${event.actor}</strong><span>${event.action}<small>${[event.scope, event.reason, event.startedAt ? `Started ${formatSupportTimestamp(event.startedAt)}` : "", event.expiresAt ? `Expires ${formatSupportTimestamp(event.expiresAt)}` : "", event.outcome].filter(Boolean).join(" · ")}</small></span><span>${event.target}</span><code>${event.caseId}</code></div>`).join("")}</div></article></div></section>` : "";
+  const content = `<header class="dash-head"><div><span class="eyebrow">Gather platform console · ${role.shortRole}${isSuperAdmin ? " · super admin" : ""}</span><h1>Platform operations</h1><p>Cross-organization health is visible without silently becoming a customer, venue user, or vendor.</p></div><div class="avatar">${role.initials}</div></header>${roleContextNotice()}<div class="metric-grid"><div class="metric"><span>Active operators</span><strong>18</strong><em>Sample pilot data</em></div><div class="metric"><span>Active vendors</span><strong>27</strong><em>8 categories</em></div><div class="metric"><span>${isFinance ? "Reconciliation exceptions" : "Onboarding reviews"}</span><strong>${isFinance ? "3" : "6"}</strong><em>${isFinance ? "Needs investigation" : "Oldest: 2 days"}</em></div><div class="metric"><span>${isOps ? "Support queue" : "Fee documents"}</span><strong>${isOps ? "9" : "14"}</strong><em>${isOps ? "2 high priority" : "Current settlement cycle"}</em></div></div><div class="platform-grid"><section class="dash-card"><div class="card-heading-row"><div><h3>${isFinance ? "Money-movement controls" : "Marketplace and support"}</h3><p>Only queues permitted for this role are shown.</p></div>${canEditPolicy ? '<button class="text-button" data-route="fee-settings">Commercial terms</button>' : ""}</div>${isFinance ? `<div class="platform-queue"><span class="task-icon">◇</span><div><strong>Processor-to-ledger mismatch</strong><small>CHG-1033 · grouped payment allocations require review</small></div><button data-task="Reconciliation case opened">Review</button></div><div class="platform-queue"><span class="task-icon">$</span><div><strong>Transfer not generated</strong><small>PST-WSE-1033 · approval and transfer are separate states</small></div><button data-task="Transfer exception opened">Review</button></div>` : ""}${isOps ? `<div class="platform-queue"><span class="task-icon">▱</span><div><strong>Operator onboarding</strong><small>2 listings need identity or payout-readiness checks</small></div><button data-task="Operator onboarding queue opened">Review</button></div><div class="platform-queue"><span class="task-icon">✦</span><div><strong>Vendor credentials</strong><small>Food service and personal-service records due</small></div><button data-task="Vendor credential queue opened">Review</button></div><div class="platform-queue"><span class="task-icon">↻</span><div><strong>Calendar sync exception</strong><small>Communal update requires operator follow-up</small></div><button data-task="Synchronization exception opened">Review</button></div>` : ""}</section><aside class="dash-card"><h3>Privileged-access boundary</h3><p>Platform roles do not silently become customers, venue staff, or vendors. Support access is reason-coded, time-limited, read-only by default, and fully audited.</p><div class="policy-callout"><strong>Booking snapshots remain immutable</strong><span>A new commercial-policy version cannot rewrite an existing booking’s saved supplier, tax, or fee terms.</span></div><button class="button button-light button-wide" data-route="sign-in">Compare another demo role</button></aside></div>${adminModules}`;
   return dashboardShell("platform-dashboard", content);
 }
 
@@ -841,7 +1093,10 @@ function hostPage() {
 function setActiveRole(roleId) {
   const nextRole = demoRoles.find(role => role.id === roleId);
   if (!nextRole) return;
-  if (activeRoleId !== nextRole.id) confirmedBookingSnapshot = null;
+  if (activeRoleId !== nextRole.id) {
+    confirmedBookingSnapshot = null;
+    endSupportSession("Ended automatically when the demo role changed");
+  }
   if (nextRole.accountType === "customer" && depositView === "review") seedCustomerClaimScenario();
   if (nextRole.accountType === "customer") {
     bookingData.contact = nextRole.name;
@@ -855,6 +1110,7 @@ function setActiveRole(roleId) {
 }
 
 function signOut() {
+  endSupportSession("Ended automatically when the demo session signed out");
   activeRoleId = null;
   confirmedBookingSnapshot = null;
   bookingData.contact = "Alex Morgan";
@@ -893,12 +1149,19 @@ function updateSessionChrome() {
   footerWorkspace.textContent = "My demo workspace";
   footerWorkspace.dataset.route = role.landing;
   sessionContext.hidden = false;
-  sessionContext.innerHTML = `<div class="session-context-inner"><div class="session-identity"><span class="session-dot" aria-hidden="true">${context.icon}</span><div><strong>Viewing as ${role.name}</strong><span>${role.organization} · ${role.role}</span></div></div><div class="session-actions"><button type="button" data-session-route="role-home">Permissions</button><button type="button" data-session-route="sign-in">Switch role</button><button type="button" data-session-signout>Sign out</button></div></div>`;
+  const supportBanner = role.id === "platform-admin" && supportSession ? `<div class="support-access-banner" role="status"><div><strong>Read-only support access authorized</strong><span>${supportSession.target} · ${supportSession.caseId} · expires ${formatSupportTimestamp(supportSession.expiresAt)}</span></div><button type="button" data-end-global-support>End access</button></div>` : "";
+  sessionContext.innerHTML = `<div class="session-context-inner"><div class="session-identity"><span class="session-dot" aria-hidden="true">${context.icon}</span><div><strong>Viewing as ${role.name}</strong><span>${role.organization} · ${role.role}</span></div></div><div class="session-actions"><button type="button" data-session-route="role-home">Permissions</button><button type="button" data-session-route="sign-in">Switch role</button><button type="button" data-session-signout>Sign out</button></div></div>${supportBanner}`;
   sessionContext.querySelectorAll("[data-session-route]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.sessionRoute)));
   sessionContext.querySelector("[data-session-signout]")?.addEventListener("click", signOut);
+  sessionContext.querySelector("[data-end-global-support]")?.addEventListener("click", () => {
+    if (!endSupportSession("Ended by the platform administrator")) return;
+    render(location.hash.slice(1) || "platform-dashboard");
+    showToast("Support access ended and was added to the demo audit trail.");
+  });
 }
 
 function render(route = location.hash.slice(1) || "home") {
+  expireSupportSessionIfNeeded();
   const routes = {
     home: homePage,
     explore: explorePage,
@@ -986,10 +1249,19 @@ function navigate(route) {
 }
 
 function bindPageEvents() {
+  app.querySelectorAll(".admin-table-head > *").forEach(cell => cell.setAttribute("role", "columnheader"));
+  app.querySelectorAll('.admin-table > [role="row"]:not(.admin-table-head) > *').forEach(cell => cell.setAttribute("role", "cell"));
   app.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => navigate(el.dataset.route)));
   app.querySelectorAll("[data-demo-role]").forEach(button => button.addEventListener("click", () => setActiveRole(button.dataset.demoRole)));
   app.querySelectorAll("[data-sign-out]").forEach(button => button.addEventListener("click", signOut));
-  app.querySelectorAll("[data-space]").forEach(el => el.addEventListener("click", () => { if (selectedSpaceId !== el.dataset.space) { bookingData.addons = []; bookingData.vendorServices = []; } selectedSpaceId = el.dataset.space; navigate("venue"); }));
+  app.querySelectorAll("[data-space]").forEach(el => el.addEventListener("click", () => {
+    const changedVenue = selectedSpaceId !== el.dataset.space;
+    const retainedServices = changedVenue && bookingData.vendorServices.length > 0;
+    if (changedVenue) bookingData.addons = [];
+    selectedSpaceId = el.dataset.space;
+    navigate("venue");
+    if (retainedServices) showToast("Vendor selections were retained and will be rechecked for this venue.");
+  }));
   app.querySelector("#home-search")?.addEventListener("submit", e => {
     e.preventDefault();
     bookingData.date = app.querySelector("#date").value;
@@ -1017,10 +1289,111 @@ function bindPageEvents() {
     bookingStep = 1;
     navigate("booking");
   });
-  app.querySelector("#event-form")?.addEventListener("submit", e => { e.preventDefault(); bookingData.guests = Number(app.querySelector("#headcount").value); bookingData.event = app.querySelector("#event-type").value; bookingData.contact = app.querySelector("#name").value.trim(); bookingData.email = app.querySelector("#email").value.trim(); bookingData.notes = app.querySelector("#details").value.trim(); bookingStep = 2; render("booking"); });
-  app.querySelector("#addon-form")?.addEventListener("submit", e => { e.preventDefault(); bookingData.addons = [...app.querySelectorAll(".addon-checkbox:checked:not(:disabled)")].map(input => input.value); bookingData.vendorServices = [...app.querySelectorAll(".vendor-checkbox:checked:not(:disabled)")].map(input => input.value); bookingStep = 3; render("booking"); });
+  app.querySelector("#event-form")?.addEventListener("submit", e => { e.preventDefault(); bookingData.guests = Number(app.querySelector("#headcount").value); ["face-painting", "cake"].forEach(type => { bookingData.vendorQuantities[type] = Math.min(bookingData.vendorQuantities[type] || bookingData.guests, bookingData.guests); }); bookingData.event = app.querySelector("#event-type").value; bookingData.contact = app.querySelector("#name").value.trim(); bookingData.email = app.querySelector("#email").value.trim(); bookingData.notes = app.querySelector("#details").value.trim(); bookingStep = 2; render("booking"); });
+  const captureVendorFormState = () => {
+    bookingData.addons = [...app.querySelectorAll(".addon-checkbox:checked:not(:disabled)")].map(input => input.value);
+    bookingData.vendorServices = [...app.querySelectorAll(".vendor-radio:checked")].map(input => input.value).filter(Boolean);
+  };
+  const updateBookingSelectionUi = () => {
+    app.querySelectorAll(".vendor-offer-card").forEach(card => card.classList.toggle("selected", Boolean(card.querySelector(".vendor-radio:checked"))));
+    const currentSummary = app.querySelector(".summary-card");
+    if (currentSummary) currentSummary.outerHTML = summaryCard();
+  };
+  app.querySelectorAll(".vendor-radio").forEach(input => input.addEventListener("change", event => {
+    const previousScroll = window.scrollY;
+    const selectedValue = event.currentTarget.value;
+    const serviceType = event.currentTarget.dataset.serviceType;
+    captureVendorFormState();
+    render("booking");
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: previousScroll });
+      const replacement = [...app.querySelectorAll(`.vendor-radio[data-service-type="${serviceType}"]`)].find(item => item.value === selectedValue);
+      replacement?.focus({ preventScroll: true });
+    });
+  }));
+  app.querySelectorAll(".addon-checkbox").forEach(input => input.addEventListener("change", event => {
+    const previousScroll = window.scrollY;
+    const changedAddon = event.currentTarget.value;
+    captureVendorFormState();
+    if (selectedVendorServices().some(requiresAllergyConfirmation)) {
+      render("booking");
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: previousScroll });
+        app.querySelector(`.addon-checkbox[value="${changedAddon}"]`)?.focus({ preventScroll: true });
+      });
+      return;
+    }
+    updateBookingSelectionUi();
+  }));
+  const refreshVendorComparison = event => {
+    const previousScroll = window.scrollY;
+    const changedControl = event?.currentTarget;
+    const focusKey = changedControl?.id ? { id: changedControl.id } : changedControl?.dataset.quantityType ? { quantityType: changedControl.dataset.quantityType } : { className: changedControl?.className, value: changedControl?.value };
+    captureVendorFormState();
+    app.querySelectorAll(".vendor-quantity-input").forEach(input => { bookingData.vendorQuantities[input.dataset.quantityType] = Number(input.value); });
+    vendorSort = app.querySelector("#vendor-sort")?.value || vendorSort;
+    bookingData.cateringPreferences = {
+      cuisine: app.querySelector("#catering-cuisine")?.value || "any",
+      menu: app.querySelector("#catering-menu")?.value || "any",
+      dietary: [...app.querySelectorAll(".catering-dietary:checked")].map(input => input.value),
+      allergies: [...app.querySelectorAll(".catering-allergy:checked")].map(input => input.value),
+      servingStyle: app.querySelector("#catering-style")?.value || "any",
+      notes: app.querySelector("#catering-notes")?.value.trim() || ""
+    };
+    render("booking");
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: previousScroll });
+      const replacement = focusKey.id ? app.querySelector(`#${focusKey.id}`) : focusKey.quantityType ? app.querySelector(`[data-quantity-type="${focusKey.quantityType}"]`) : [...app.querySelectorAll(`.${String(focusKey.className || "").split(" ")[0]}`)].find(input => input.value === focusKey.value);
+      replacement?.focus({ preventScroll: true });
+      const matchingCount = vendorServices.filter(service => service.serviceType === "catering" && vendorMatchesCateringPreferences(service)).length;
+      const status = app.querySelector("#vendor-filter-status");
+      if (status) status.textContent = `${matchingCount} catering package${matchingCount === 1 ? "" : "s"} match the selected filters. Existing selections are retained when they need attention.`;
+    });
+  };
+  ["#vendor-sort", "#catering-cuisine", "#catering-menu", "#catering-style"].forEach(selector => app.querySelector(selector)?.addEventListener("change", refreshVendorComparison));
+  app.querySelectorAll(".catering-dietary,.catering-allergy,.vendor-quantity-input").forEach(input => input.addEventListener("change", refreshVendorComparison));
+  app.querySelector("#catering-notes")?.addEventListener("input", event => { bookingData.cateringPreferences.notes = event.currentTarget.value; });
+  app.querySelector("#catering-notes")?.addEventListener("change", refreshVendorComparison);
+  app.querySelector("#request-vendor-confirmation")?.addEventListener("click", event => {
+    const previousScroll = window.scrollY;
+    captureVendorFormState();
+    bookingData.cateringPreferences.notes = app.querySelector("#catering-notes")?.value.trim() || "";
+    const service = vendorServices.find(item => item.id === event.currentTarget.dataset.serviceId);
+    if (!service || !vendorAvailability(service).available) { showToast("This package must be updated before confirmation can be requested."); return; }
+    vendorConfirmationRequests[service.id] = allergyConfirmationSignature(service);
+    render("booking");
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: previousScroll });
+      app.querySelector("#simulate-vendor-confirmation")?.focus({ preventScroll: true });
+    });
+    showToast("Confirmation request sent. Payment remains blocked until the vendor responds.");
+  });
+  app.querySelector("#simulate-vendor-confirmation")?.addEventListener("click", event => {
+    const previousScroll = window.scrollY;
+    captureVendorFormState();
+    bookingData.cateringPreferences.notes = app.querySelector("#catering-notes")?.value.trim() || "";
+    const service = vendorServices.find(item => item.id === event.currentTarget.dataset.serviceId);
+    if (!service || !vendorAvailability(service).available || !hasCurrentAllergyConfirmationRequest(service)) { showToast("Send a current confirmation request before simulating the vendor response."); return; }
+    vendorConfirmations[service.id] = allergyConfirmationSignature(service);
+    render("booking");
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: previousScroll });
+      app.querySelector("#addon-form button[type='submit']")?.focus({ preventScroll: true });
+    });
+    showToast("Prototype-only vendor response recorded for these exact allergy requirements.");
+  });
+  app.querySelector("#addon-form")?.addEventListener("submit", e => {
+    e.preventDefault();
+    captureVendorFormState();
+    bookingData.cateringPreferences.notes = app.querySelector("#catering-notes")?.value.trim() || "";
+    const vendorStatus = selectedVendorAvailability();
+    if (!vendorStatus.available) { showToast(`${vendorStatus.unavailable.map(item => item.name).join(", ")} no longer matches this booking. Choose an available package.`); return; }
+    if (!vendorStatus.ready) { render("booking"); showToast("Written vendor confirmation is required for the selected allergy requirements before payment."); return; }
+    bookingStep = 3;
+    render("booking");
+  });
   app.querySelector("#booking-back")?.addEventListener("click", () => { bookingStep = Math.max(1, bookingStep - 1); render("booking"); });
-  app.querySelector("#confirm-booking")?.addEventListener("click", () => { if (!app.querySelector("#agree").checked) { showToast("Please accept the applicable booking policies to continue."); return; } if (!availability().available) { showToast("That venue time is no longer available. Please choose another time."); navigate("venue"); return; } const vendorStatus = selectedVendorAvailability(); if (!vendorStatus.available) { showToast(`${vendorStatus.unavailable.map(item => item.name).join(", ")} is no longer available. Please update vendor services.`); bookingStep = 2; render("booking"); return; } confirmedBookingSnapshot = createBookingSnapshot(); bookingSequence += 1; bookingStep = 4; render("booking"); });
+  app.querySelector("#confirm-booking")?.addEventListener("click", () => { if (!app.querySelector("#agree").checked) { showToast("Please accept the applicable booking policies to continue."); return; } if (!availability().available) { showToast("That venue time is no longer available. Please choose another time."); navigate("venue"); return; } const vendorStatus = selectedVendorAvailability(); if (!vendorStatus.ready) { showToast(vendorStatus.pendingConfirmations.length ? "Vendor allergy confirmation is required before payment." : `${vendorStatus.unavailable.map(item => item.name).join(", ")} is no longer available. Please update vendor services.`); bookingStep = 2; render("booking"); return; } confirmedBookingSnapshot = createBookingSnapshot(); bookingSequence += 1; bookingStep = 4; render("booking"); });
   app.querySelector("#release-deposit")?.addEventListener("click", () => { depositDeduction = 0; depositView = "release_approval_pending"; render("deposit"); });
   app.querySelector("#propose-deduction")?.addEventListener("click", () => { depositView = "deduction"; render("deposit"); });
   app.querySelector("#cancel-deduction")?.addEventListener("click", () => { depositView = "review"; render("deposit"); });
@@ -1049,6 +1422,25 @@ function bindPageEvents() {
     policyRevision += 1;
     render("fee-settings");
     showToast("New future-booking policy version saved in this demo.");
+  });
+  app.querySelector("#support-session-form")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const caseId = app.querySelector("#support-case").value.trim().toUpperCase();
+    const target = app.querySelector("#support-target").value;
+    const reason = app.querySelector("#support-reason").value;
+    const duration = Number(app.querySelector("#support-duration").value);
+    const startedAt = new Date();
+    const expiresAt = new Date(startedAt.getTime() + duration * 60000);
+    supportSession = { caseId, target, reason, duration, actor: activeRole().name, scope: "Read-only tenant support", startedAt: startedAt.toISOString(), expiresAt: expiresAt.toISOString() };
+    supportAuditEvents.unshift({ timestamp: startedAt.toISOString(), actor: supportSession.actor, action: `Started ${duration}-minute read-only support session`, target, caseId, scope: supportSession.scope, reason, startedAt: supportSession.startedAt, expiresAt: supportSession.expiresAt, outcome: "Access authorized" });
+    scheduleSupportExpiry();
+    render("platform-dashboard");
+    showToast("Audited read-only support session started in this demo.");
+  });
+  app.querySelector("#end-support-session")?.addEventListener("click", () => {
+    if (!endSupportSession("Ended by the platform administrator")) return;
+    render("platform-dashboard");
+    showToast("Support access ended and was added to the demo audit trail.");
   });
   app.querySelectorAll(".filter-chip").forEach(chip => chip.addEventListener("click", () => { app.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active")); chip.classList.add("active"); showToast("Filter controls are for demonstration only."); }));
   app.querySelectorAll("[data-task]").forEach(button => button.addEventListener("click", () => showToast(button.dataset.task)));
