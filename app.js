@@ -124,6 +124,28 @@ const vendorServices = [
   { id: "photo-portrait-lounge", serviceType: "photo-booth", category: "Entertainment", name: "Portrait lounge experience", vendor: "Portrait Lounge YYC", invoicePrefix: "PLY", pricing: { type: "flat", amount: 540 }, rating: 4.2, reviewCount: 39, description: "Four-hour staffed portrait lounge with premium backdrop and live gallery", inclusions: ["Four hours", "Two attendants", "Premium backdrop & gallery"], active: true, busy: [], venueIds: ["ridgeview", "oak"], minGuests: 30, maxGuests: 150, minLeadDays: 10, taxProfile: { id: "TAX-PLY-CA", label: "GST · Portrait Lounge sample profile (5%)", rate: 0.05 } }
 ];
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_LABEL = "5 MB";
+const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+const offeringChoiceTemplates = {
+  catering: ["Menu and dishes", "Serving style", "Dietary support", "Staff and tableware", "Delivery window", "Custom menu request"],
+  cake: ["Size and servings", "Flavour and filling", "Icing and colours", "Design template", "Inscription", "Custom-design upload"],
+  decor: ["Theme and palette", "Backdrop style", "Rental quantities", "Setup and teardown", "Signage", "Mood-board upload"],
+  magic: ["Show style", "Audience age", "Performance time", "Show length", "Technical requirements"],
+  "face-painting": ["Design menu", "Participant count", "Artist count", "Material preferences", "Start time"],
+  "photo-booth": ["Booth style", "Backdrop", "Print package", "Template and branding", "Duration", "Logo upload"]
+};
+
+const serviceCategoryLabels = {
+  catering: "Catering",
+  cake: "Cakes & desserts",
+  decor: "Decorations",
+  magic: "Magic shows",
+  "face-painting": "Face painting",
+  "photo-booth": "Photo booths"
+};
+
 const app = document.querySelector("#app");
 const toast = document.querySelector(".toast");
 let bookingStep = 1;
@@ -131,7 +153,8 @@ let bookingData = {
   date: "2026-10-17", start: "18:00", end: "23:00", guests: 60, purposeId: "birthday-party", event: "Birthday or family celebration", contact: "Alex Morgan", email: "alex@example.com", notes: "Family birthday dinner with music and a catered buffet.", activityDescription: "", addons: [], vendorServices: [],
   eventNeeds: { food: true, onsiteCooking: false, alcohol: false, amplifiedMusic: true, children: true, publicEvent: false },
   vendorQuantities: { "face-painting": 30, cake: 60 },
-  cateringPreferences: { cuisine: "any", menu: "any", dietary: [], allergies: [], servingStyle: "any", notes: "" }
+  cateringPreferences: { cuisine: "any", menu: "any", dietary: [], allergies: [], servingStyle: "any", notes: "" },
+  vendorConfigurations: {}
 };
 let addonStage = "fit";
 let activeServiceType = null;
@@ -140,6 +163,16 @@ let autoRequiredAddonIds = new Set();
 let vendorSort = "best-match";
 let vendorConfirmationRequests = {};
 let vendorConfirmations = {};
+let organizerReferenceFiles = {};
+let vendorOfferingEditor = {
+  editingId: "magic-wonderspark",
+  status: "published",
+  image: null,
+  imageError: "",
+  savedAt: null,
+  draft: null
+};
+let vendorOfferingDrafts = [];
 let selectedSpaceId = "ridgeview";
 let depositView = "review";
 let depositDeduction = 0;
@@ -281,7 +314,7 @@ const demoRoles = [
     permissionKeys: ["vendor.settings", "vendor.members", "vendor.orders", "vendor.fulfilment", "vendor.finance"],
     permissions: ["Manage service packages, availability, credentials, and staff", "Accept and fulfil eligible service orders", "View vendor supplier invoices, Gather fees, and calculated payouts", "Maintain payout onboarding"],
     restrictions: ["Cannot see venue deposit or association payout records", "Cannot change customer or venue supplier documents"],
-    routes: ["vendor-dashboard", "vendor-invoice", "vendor-payout"]
+    routes: ["vendor-dashboard", "vendor-offerings", "vendor-invoice", "vendor-payout"]
   },
   {
     id: "vendor-fulfilment", accountType: "vendor", role: "Order / fulfilment staff", shortRole: "Fulfilment", name: "Jordan Bell", initials: "JB", organization: "WonderSpark Entertainment", landing: "vendor-dashboard", workspaceLabel: "Open fulfilment queue",
@@ -359,6 +392,7 @@ const routeLabels = {
   "association-payout": "Association payout statement",
   "vendor-payout": "Vendor payout statement",
   "vendor-dashboard": "Vendor portal",
+  "vendor-offerings": "Vendor offerings",
   "platform-dashboard": "Platform console",
   "fee-settings": "Platform commercial terms",
   "venue-terms": "Venue commercial terms",
@@ -535,18 +569,201 @@ function recommendedServiceTypeIds() {
 
 const eventNeedOptionsFor = purposeId => eventNeedOptions.filter(option => option.purposes.includes(purposeId));
 
-const servicePrice = service => service.pricing.type === "per_person"
-  ? Math.max(service.pricing.minimum || 0, service.pricing.amount * Number(bookingData.guests))
-  : service.pricing.amount;
+const cateringMenus = {
+  "catering-neighbourhood": {
+    mains: ["Herb-roasted chicken", "Vegetable lasagna", "Chickpea curry", "Beef meatballs"],
+    sides: ["Garden salad", "Roasted potatoes", "Seasonal vegetables", "Rice pilaf", "Dinner rolls"]
+  },
+  "catering-bow-river": {
+    mains: ["Maple chicken", "Braised beef", "Vegetable lasagna", "Lentil shepherd’s pie"],
+    sides: ["Mixed greens", "Garlic mashed potatoes", "Rice pilaf", "Roasted vegetables", "Macaroni salad"]
+  },
+  "catering-saffron": {
+    mains: ["Butter chicken", "Chana masala", "Palak paneer", "Vegetable korma", "Beef keema"],
+    sides: ["Basmati rice", "Jeera rice", "Naan", "Cucumber raita", "Kachumber salad"]
+  },
+  "catering-grand": {
+    mains: ["Herb chicken supreme", "Braised short rib", "Wild-mushroom risotto", "Eggplant parmigiana"],
+    sides: ["Market greens", "Potato gratin", "Seasonal vegetables", "Rosemary potatoes", "Artisan rolls"]
+  }
+};
+
+const option = (id, label, price = 0, priceType = "flat", extra = {}) => ({ id, label, price, priceType, ...extra });
+
+function categoryConfigurationSchemaFor(service) {
+  if (!service) return [];
+  if (service.serviceType === "catering") {
+    const menu = cateringMenus[service.id] || cateringMenus["catering-bow-river"];
+    const includedMains = service.id === "catering-saffron" ? 3 : 2;
+    const includedSides = service.id === "catering-neighbourhood" ? 2 : 3;
+    const servingOptions = (service.servingStyles || ["Buffet"]).map((label, index) => option(label.toLowerCase().replace(/[^a-z0-9]+/g, "-"), label, index ? 2 : 0, "per_person"));
+    return [
+      { id: "mains", label: `Choose ${includedMains} main dishes`, help: "Included in this package", type: "multi", required: true, min: includedMains, max: includedMains, options: menu.mains.map((label, index) => option(`main-${index + 1}`, label, index === menu.mains.length - 1 ? 2 : 0, "per_person")) },
+      { id: "sides", label: `Choose ${includedSides} sides`, help: "Included in this package", type: "multi", required: true, min: includedSides, max: includedSides, options: menu.sides.map((label, index) => option(`side-${index + 1}`, label, index === menu.sides.length - 1 ? 1 : 0, "per_person")) },
+      { id: "serving", label: "Serving style", type: "single", required: true, options: servingOptions },
+      { id: "extras", label: "Service extras", help: "Optional additions from this caterer", type: "multi", min: 0, max: 4, options: [option("reusable-tableware", "Reusable tableware", 3, "per_person"), option("service-staff", "Two service staff", 180), option("coffee-tea", "Coffee and tea station", 2.5, "per_person"), ...(service.customRequestsAllowed === false ? [] : [option("custom-menu", "Custom menu designed with the caterer", 0, "flat", { bookingMode: "quote" })])] },
+      { id: "service-notes", label: "Menu and service notes", type: "textarea", required: false, placeholder: "Portions, timing, substitutions, or other details for the caterer" }
+    ];
+  }
+  if (service.serviceType === "cake") return [
+    { id: "flavour", label: "Cake flavour", type: "single", required: true, options: [option("vanilla", "Vanilla"), option("chocolate", "Chocolate"), option("red-velvet", "Red velvet", 8), option("lemon", "Lemon", 8)] },
+    { id: "filling", label: "Filling", type: "single", required: true, options: [option("vanilla-buttercream", "Vanilla buttercream"), option("chocolate-ganache", "Chocolate ganache", 10), option("strawberry", "Strawberry preserve", 10), option("lemon-curd", "Lemon curd", 12)] },
+    { id: "icing", label: "Icing", type: "single", required: true, options: [option("buttercream", "Buttercream"), option("fondant", "Fondant", 25), option("cream-cheese", "Cream cheese", 15)] },
+    { id: "design", label: "Cake design", type: "single", required: true, options: [option("classic", "Classic vendor design"), option("floral", "Floral design", 25), option("themed", "Vendor themed design", 45), ...(service.customRequestsAllowed === false ? [] : [option("custom-reference", "Custom design from my reference", 0, "flat", { bookingMode: "quote", requiresImage: true })])] },
+    { id: "colour", label: "Colours", type: "text", required: false, placeholder: "Example: sage green, ivory, and gold" },
+    { id: "inscription", label: "Inscription", type: "text", required: false, maxLength: 60, placeholder: "Example: Happy birthday, Maya!" },
+    { id: "fulfilment", label: "Pickup or delivery", type: "single", required: true, options: [option("pickup", "Pickup"), option("delivery", "Local delivery", 25)] }
+  ];
+  if (service.serviceType === "decor") return [
+    { id: "theme", label: "Style", type: "single", required: true, options: [option("bright", "Bright celebration"), option("elegant", "Elegant neutral", 35), option("seasonal", "Seasonal theme", 25), ...(service.customRequestsAllowed === false ? [] : [option("custom-concept", "Custom concept from a mood board", 0, "flat", { bookingMode: "quote", requiresImage: true })])] },
+    { id: "palette", label: "Colour palette", type: "text", required: false, placeholder: "Example: terracotta, cream, and eucalyptus" },
+    { id: "signage", label: "Personalized welcome sign", type: "single", required: true, options: [option("none", "No sign"), option("printed", "Printed welcome sign", 45)] },
+    { id: "decor-notes", label: "Room and setup notes", type: "textarea", required: false, placeholder: "Share table count, room zones, wording, or setup priorities" }
+  ];
+  if (service.serviceType === "magic") return [
+    { id: "show-style", label: "Show style", type: "single", required: true, options: [option("family", "Family interactive"), option("children", "Children-focused"), option("stage", "Stage presentation", 75), ...(service.customRequestsAllowed === false ? [] : [option("custom-show", "Custom show concept", 0, "flat", { bookingMode: "quote" })])] },
+    { id: "audience-age", label: "Audience age range", type: "single", required: true, options: [option("mixed", "Mixed ages"), option("under-8", "Mostly under 8"), option("ages-8-plus", "Mostly 8+")] },
+    { id: "performance-time", label: "Preferred performance start", type: "time", required: true },
+    { id: "show-length", label: "Show length", type: "single", required: true, options: [option("60-minutes", "60 minutes"), option("75-minutes", "75 minutes", 90), option("90-minutes", "90 minutes", 160)] },
+    { id: "technical-needs", label: "Technical and setup notes", type: "textarea", required: false, placeholder: "Stage, sound, power, access, or other setup details" }
+  ];
+  if (service.serviceType === "face-painting") return [
+    { id: "design-menu", label: "Design menu", type: "single", required: true, options: [option("quick", "Quick designs"), option("full", "Full-face designs", 45), option("theme", "Event-themed menu", 35), ...(service.customRequestsAllowed === false ? [] : [option("custom-art", "Custom design menu from a reference", 0, "flat", { bookingMode: "quote", requiresImage: true })])] },
+    { id: "materials", label: "Material preferences", type: "multi", min: 0, max: 2, options: [option("glitter-free", "Glitter-free"), option("fragrance-free", "Fragrance-free"), option("gems", "Face gems", 25)] },
+    { id: "artist-count", label: "Artist team", type: "single", required: true, options: [option("one", "One artist"), option("two", "Two artists", 140)] },
+    { id: "artist-start", label: "Preferred artist start", type: "time", required: true },
+    { id: "face-notes", label: "Design and participant notes", type: "textarea", required: false, placeholder: "Theme, ages, accessibility needs, or design priorities" }
+  ];
+  if (service.serviceType === "photo-booth") return [
+    { id: "backdrop", label: "Backdrop", type: "single", required: true, options: [option("standard", "Standard neutral"), option("sequin", "Sequin backdrop", 40), option("floral", "Floral wall", 85)] },
+    { id: "prints", label: "Print package", type: "single", required: true, options: [option("digital", "Digital gallery only"), option("single", "One print per session", 75), option("unlimited", "Unlimited prints", 140)] },
+    { id: "template", label: "Photo template", type: "single", required: true, options: [option("vendor-template", "Vendor template"), ...(service.customRequestsAllowed === false ? [] : [option("custom-branding", "Custom logo or artwork", 0, "flat", { bookingMode: "quote", requiresImage: true })])] },
+    { id: "booth-notes", label: "Branding and setup notes", type: "textarea", required: false, placeholder: "Share wording, colors, placement, or guest-flow details" }
+  ];
+  return [];
+}
+
+function configurationSchemaFor(service) {
+  if (!service || service.bookingMode === "fixed") return [];
+  if (service.bookingMode === "quote") return [{ id: "custom-brief", label: "Custom service brief", type: "textarea", required: true, placeholder: "Describe the scope, style, schedule, quantities, and anything the vendor needs to price" }];
+  const source = Array.isArray(service.optionGroups) && service.optionGroups.length
+    ? service.optionGroups
+    : categoryConfigurationSchemaFor(service);
+  const allowCustomQuote = service.bookingMode === "hybrid" || (!service.bookingMode && service.customRequestsAllowed !== false);
+  return source
+    .filter(group => group.enabled !== false)
+    .map(group => ({
+      ...group,
+      options: group.options
+        ? group.options.filter(choice => choice.enabled !== false && (choice.bookingMode !== "quote" || allowCustomQuote))
+        : undefined
+    }))
+    .filter(group => !group.options || group.options.length > 0);
+}
+
+function defaultConfigurationFor(service) {
+  const selections = {};
+  configurationSchemaFor(service).forEach(group => {
+    if (group.type === "single") selections[group.id] = group.required ? group.options[0]?.id || "" : "";
+    else if (group.type === "multi") selections[group.id] = group.options.slice(0, group.min || 0).map(item => item.id);
+    else if (group.type === "time") selections[group.id] = bookingData.start;
+    else selections[group.id] = "";
+  });
+  return { selections, referenceImage: null, quote: { status: "none", amount: 0, reference: "" } };
+}
+
+function configurationFor(service) {
+  if (!bookingData.vendorConfigurations[service.id]) bookingData.vendorConfigurations[service.id] = defaultConfigurationFor(service);
+  return bookingData.vendorConfigurations[service.id];
+}
+
+function selectedConfigurationOptions(service, configuration = configurationFor(service)) {
+  const selected = [];
+  configurationSchemaFor(service).forEach(group => {
+    if (!group.options) return;
+    const values = Array.isArray(configuration.selections[group.id]) ? configuration.selections[group.id] : [configuration.selections[group.id]];
+    values.filter(Boolean).forEach(value => {
+      const chosen = group.options.find(item => item.id === value);
+      if (chosen) selected.push({ groupId: group.id, groupLabel: group.label, ...chosen });
+    });
+  });
+  return selected;
+}
+
+function configurationStatus(service) {
+  const schema = configurationSchemaFor(service);
+  if (!schema.length && service.bookingMode !== "quote") return { ready: true, complete: true, quoteRequired: false, message: "No package choices are required." };
+  const configuration = configurationFor(service);
+  const missing = [];
+  schema.forEach(group => {
+    const value = configuration.selections[group.id];
+    if (group.type === "multi" && group.required && (!Array.isArray(value) || value.length < (group.min || 1))) missing.push(`${group.label}: choose ${group.min || 1}`);
+    if (["single", "text", "time", "textarea"].includes(group.type) && group.required && !String(value || "").trim()) missing.push(group.label);
+  });
+  const quoteChoices = selectedConfigurationOptions(service, configuration).filter(item => item.bookingMode === "quote");
+  const referenceRequired = quoteChoices.some(item => item.requiresImage);
+  if (referenceRequired && !configuration.referenceImage) missing.push("Reference image");
+  const quoteRequired = service.bookingMode === "quote" || quoteChoices.length > 0;
+  const quoteReady = !quoteRequired || configuration.quote?.status === "quoted";
+  const complete = missing.length === 0;
+  const message = !complete
+    ? `Complete: ${missing.join(", ")}.`
+    : quoteRequired && configuration.quote?.status === "requested"
+      ? "Custom request sent; payment is blocked until the vendor returns an itemized quote."
+      : quoteRequired && !quoteReady
+        ? "Custom work requires a vendor quote before payment."
+        : quoteRequired
+          ? `Vendor quote ${configuration.quote.reference} accepted for this exact configuration.`
+          : "All required package choices are complete and priced.";
+  return { ready: complete && quoteReady, complete, quoteRequired, referenceRequired, missing, message };
+}
+
+const baseServicePrice = service => {
+  const quantity = service.pricing.type === "per_person"
+    ? Number(bookingData.guests)
+    : service.pricing.type === "hourly"
+      ? durationHours()
+      : service.pricing.type === "per_unit"
+        ? serviceQuantity(service)
+        : 1;
+  return Math.max(service.pricing.minimum || 0, service.pricing.amount * quantity);
+};
+
+function configurationPrice(service) {
+  const configuration = configurationFor(service);
+  const choices = selectedConfigurationOptions(service, configuration);
+  const choiceTotal = choices.reduce((sum, choice) => {
+    const multiplier = choice.priceType === "per_person"
+      ? Number(bookingData.guests)
+      : choice.priceType === "hourly"
+        ? durationHours()
+        : choice.priceType === "per_unit"
+          ? serviceQuantity(service)
+          : 1;
+    return sum + Number(choice.price || 0) * multiplier;
+  }, 0);
+  const quoteApplies = service.bookingMode === "quote" || choices.some(choice => choice.bookingMode === "quote");
+  const quotedAmount = quoteApplies && configuration.quote?.status === "quoted" ? Number(configuration.quote.amount || 0) : 0;
+  return choiceTotal + quotedAmount;
+}
+
+const servicePrice = service => baseServicePrice(service) + configurationPrice(service);
 
 function servicePriceBreakdown(service) {
-  if (service.pricing.type !== "per_person") return `${money(servicePrice(service))} fixed package`;
   const quantity = Number(bookingData.guests);
-  const calculated = service.pricing.amount * quantity;
-  const minimumApplied = (service.pricing.minimum || 0) > calculated;
-  return minimumApplied
-    ? `${money(service.pricing.amount)} × ${quantity} = ${money(calculated)} · ${money(service.pricing.minimum)} minimum applied`
-    : `${money(service.pricing.amount)} × ${quantity} guests`;
+  const configured = configurationPrice(service);
+  let baseBreakdown;
+  if (service.pricing.type === "flat") baseBreakdown = `${money(baseServicePrice(service))} fixed package`;
+  else {
+    const pricingQuantity = service.pricing.type === "hourly" ? durationHours() : service.pricing.type === "per_unit" ? serviceQuantity(service) : quantity;
+    const unitLabel = service.pricing.type === "hourly" ? "hours" : service.pricing.type === "per_unit" ? "units" : "guests";
+    const calculated = service.pricing.amount * pricingQuantity;
+    const minimumApplied = (service.pricing.minimum || 0) > calculated;
+    baseBreakdown = minimumApplied
+      ? `${money(service.pricing.amount)} × ${pricingQuantity} = ${money(calculated)} · ${money(service.pricing.minimum)} minimum applied`
+      : `${money(service.pricing.amount)} × ${pricingQuantity} ${unitLabel}`;
+  }
+  return configured ? `${baseBreakdown} + ${money(configured)} selected options` : baseBreakdown;
 }
 
 const serviceTypeFor = service => vendorServiceTypes.find(type => type.id === service.serviceType);
@@ -573,7 +790,8 @@ const allergyConfirmationSignature = service => JSON.stringify({
   purposeId: bookingData.purposeId,
   eventType: bookingData.event,
   venueAddons: [...bookingData.addons].sort(),
-  preferences: bookingData.cateringPreferences
+  preferences: bookingData.cateringPreferences,
+  selectedConfiguration: configurationFor(service)
 });
 const requiresAllergyConfirmation = service => service.serviceType === "catering" && bookingData.cateringPreferences.allergies.length > 0;
 const hasCurrentAllergyConfirmationRequest = service => requiresAllergyConfirmation(service) && vendorConfirmationRequests[service.id] === allergyConfirmationSignature(service);
@@ -647,7 +865,16 @@ function vendorAvailability(service) {
 function selectedVendorAvailability() {
   const unavailable = selectedVendorServices().filter(service => !vendorAvailability(service).available);
   const pendingConfirmations = selectedVendorServices().filter(service => vendorAvailability(service).requiresConfirmation);
-  return { available: unavailable.length === 0, ready: unavailable.length === 0 && pendingConfirmations.length === 0, unavailable, pendingConfirmations };
+  const incompleteConfigurations = selectedVendorServices().filter(service => !configurationStatus(service).complete);
+  const pendingQuotes = selectedVendorServices().filter(service => configurationStatus(service).quoteRequired && !configurationStatus(service).ready);
+  return {
+    available: unavailable.length === 0 && incompleteConfigurations.length === 0,
+    ready: unavailable.length === 0 && pendingConfirmations.length === 0 && incompleteConfigurations.length === 0 && pendingQuotes.length === 0,
+    unavailable,
+    pendingConfirmations,
+    incompleteConfigurations,
+    pendingQuotes
+  };
 }
 
 function pricing() {
@@ -664,6 +891,37 @@ function pricing() {
   return { rental, addons, venueSubtotal, vendorSubtotal, venueTax, vendorTax, tax, servicesTotal, rentalTotal: servicesTotal, deposit, dueNow: servicesTotal + deposit };
 }
 
+function snapshotConfigurationFor(service) {
+  const configuration = configurationFor(service);
+  const selections = configurationSchemaFor(service).map(group => {
+    const value = configuration.selections[group.id];
+    if (group.options) {
+      const ids = Array.isArray(value) ? value : [value];
+      const choices = ids.filter(Boolean).map(id => group.options.find(item => item.id === id)).filter(Boolean).map(item => ({
+        id: item.id,
+        label: item.label,
+        price: Number(item.price || 0) * (item.priceType === "per_person" ? Number(bookingData.guests) : item.priceType === "hourly" ? durationHours() : item.priceType === "per_unit" ? serviceQuantity(service) : 1),
+        priceBasis: item.priceType
+      }));
+      return { id: group.id, label: group.label, type: group.type, choices };
+    }
+    return { id: group.id, label: group.label, type: group.type, value: String(value || "") };
+  });
+  return {
+    quantity: serviceQuantity(service),
+    guests: bookingData.guests,
+    selections,
+    referenceImage: configuration.referenceImage ? { ...configuration.referenceImage } : null,
+    quote: configuration.quote?.status === "quoted" ? { ...configuration.quote } : null,
+    configurationAdjustment: configurationPrice(service),
+    cateringRequirements: service.serviceType === "catering" ? {
+      ...bookingData.cateringPreferences,
+      dietary: [...bookingData.cateringPreferences.dietary],
+      allergies: [...bookingData.cateringPreferences.allergies]
+    } : null
+  };
+}
+
 function createBookingSnapshot() {
   const reference = bookingSequence;
   return JSON.parse(JSON.stringify({
@@ -673,22 +931,18 @@ function createBookingSnapshot() {
     booking: bookingData,
     totals: pricing(),
     addons: currentAddons().filter(item => bookingData.addons.includes(item.id)),
-    vendors: selectedBillableVendorServices().map(item => ({
-      ...item,
-      price: servicePrice(item),
-      pricingBasis: servicePriceBreakdown(item),
-      cancellationPolicy: cancellationPolicyFor(item),
-      serviceWindow: { start: formatTime(bookingData.start), end: formatTime(bookingData.end), setupMinutes: setupHoursFor(item) * 60, teardownMinutes: teardownHoursFor(item) * 60 },
-      allergyConfirmation: requiresAllergyConfirmation(item) ? { status: "Vendor confirmed", source: "Authenticated vendor response (simulated in prototype)", signature: allergyConfirmationSignature(item) } : null,
-      selectedConfiguration: item.serviceType === "catering" ? {
-        ...bookingData.cateringPreferences,
-        dietary: bookingData.cateringPreferences.dietary.length ? bookingData.cateringPreferences.dietary.join(", ") : "any",
-        allergy: bookingData.cateringPreferences.allergies.length ? bookingData.cateringPreferences.allergies.join(", ") : "none",
-        dietaryRequirements: [...bookingData.cateringPreferences.dietary],
-        allergyRequirements: [...bookingData.cateringPreferences.allergies],
-        guests: bookingData.guests
-      } : { guests: bookingData.guests, quantity: serviceQuantity(item) }
-    })),
+    vendors: selectedBillableVendorServices().map(item => {
+      const { imagePreviewUrl, ...catalogueItem } = item;
+      return {
+        ...catalogueItem,
+        price: servicePrice(item),
+        pricingBasis: servicePriceBreakdown(item),
+        cancellationPolicy: cancellationPolicyFor(item),
+        serviceWindow: { start: formatTime(bookingData.start), end: formatTime(bookingData.end), setupMinutes: setupHoursFor(item) * 60, teardownMinutes: teardownHoursFor(item) * 60 },
+        allergyConfirmation: requiresAllergyConfirmation(item) ? { status: "Vendor confirmed", source: "Authenticated vendor response (simulated in prototype)", signature: allergyConfirmationSignature(item) } : null,
+        selectedConfiguration: snapshotConfigurationFor(item)
+      };
+    }),
     venueTaxProfile: venueTaxProfileFor(currentSpace()),
     venueInvoiceNumber: `INV-${currentSpace().invoicePrefix}-${reference}`,
     receiptNumber: `RCT-${reference}`
@@ -838,7 +1092,7 @@ function summaryCard() {
   const selectedVendors = selectedBillableVendorServices();
   const bookingSubtotal = totals.venueSubtotal + totals.vendorSubtotal;
   const fit = eventCompatibility();
-  return `<aside class="summary-card"><div class="mini-space"></div><h3>${currentSpace().name}</h3><p><strong>${currentPurpose().label}</strong><br>${new Date(bookingData.date + "T12:00:00").toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" })}<br>${formatTime(bookingData.start)}–${formatTime(bookingData.end)} · ${bookingData.guests} attendees</p><div class="summary-available ${fit.status === "allowed" ? "" : "warning"}">${fit.status === "allowed" ? "⚡ Venue Instant Book" : `! ${fit.label}`}</div><div class="price-lines"><div class="price-line"><span>Space rental</span><span>${money(totals.rental)}</span></div>${selectedAddons.map(item => `<div class="price-line"><span>${item.name}</span><span>${money(item.price)}</span></div>`).join("")}${selectedVendors.map(item => `<div class="price-line"><span>${item.name}<small>${item.vendor}${item.pricing.type === "per_person" ? ` · ${servicePriceBreakdown(item)}` : ""}</small></span><span>${money(servicePrice(item))}</span></div>`).join("")}<div class="price-line subtotal"><span>Booking subtotal before tax</span><span>${money(bookingSubtotal)}</span></div><div class="price-line"><span>Venue supplier tax<small>${venueTaxProfileFor(currentSpace()).id}</small></span><span>${money(totals.venueTax)}</span></div>${selectedVendors.map(item => `<div class="price-line"><span>${item.vendor} tax<small>${item.taxProfile.id}</small></span><span>${money(taxFor(servicePrice(item), item.taxProfile))}</span></div>`).join("")}<div class="price-line"><span>Total supplier taxes</span><span>${money(totals.tax)}</span></div><div class="price-line total"><span>Services total</span><span>${money(totals.servicesTotal)}</span></div>${totals.deposit ? `<div class="price-line"><span>Refundable security deposit</span><span>${money(totals.deposit)}</span></div>` : ""}<div class="price-line due"><span>Total due today (CAD)</span><span>${money(totals.dueNow)}</span></div></div></aside>`;
+  return `<aside class="summary-card"><div class="mini-space"></div><h3>${currentSpace().name}</h3><p><strong>${currentPurpose().label}</strong><br>${new Date(bookingData.date + "T12:00:00").toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" })}<br>${formatTime(bookingData.start)}–${formatTime(bookingData.end)} · ${bookingData.guests} attendees</p><div class="summary-available ${fit.status === "allowed" ? "" : "warning"}">${fit.status === "allowed" ? "⚡ Venue Instant Book" : `! ${fit.label}`}</div><div class="price-lines"><div class="price-line"><span>Space rental</span><span>${money(totals.rental)}</span></div>${selectedAddons.map(item => `<div class="price-line"><span>${item.name}</span><span>${money(item.price)}</span></div>`).join("")}${selectedVendors.map(item => `<div class="price-line"><span>${escapeHtml(item.name)}<small>${escapeHtml(item.vendor)} · ${servicePriceBreakdown(item)}</small></span><span>${money(servicePrice(item))}</span></div>`).join("")}<div class="price-line subtotal"><span>Booking subtotal before tax</span><span>${money(bookingSubtotal)}</span></div><div class="price-line"><span>Venue supplier tax<small>${venueTaxProfileFor(currentSpace()).id}</small></span><span>${money(totals.venueTax)}</span></div>${selectedVendors.map(item => `<div class="price-line"><span>${escapeHtml(item.vendor)} tax<small>${item.taxProfile.id}</small></span><span>${money(taxFor(servicePrice(item), item.taxProfile))}</span></div>`).join("")}<div class="price-line"><span>Total supplier taxes</span><span>${money(totals.tax)}</span></div><div class="price-line total"><span>Services total</span><span>${money(totals.servicesTotal)}</span></div>${totals.deposit ? `<div class="price-line"><span>Refundable security deposit</span><span>${money(totals.deposit)}</span></div>` : ""}<div class="price-line due"><span>Total due today (CAD)</span><span>${money(totals.dueNow)}</span></div></div></aside>`;
 }
 function purposePicker() {
   return `<fieldset class="purpose-picker"><legend>What are you planning?</legend><p>Purpose guides the recommendations; ${currentSpace().name}’s configured rules decide what is allowed.</p><div class="purpose-grid">${eventPurposes.map(purpose => {
@@ -865,12 +1119,13 @@ function vendorOfferCard(item) {
   const reviews = vendorReviewSummary(item);
   const recentReview = publicReviewsFor("vendor-service", item.id)[0];
   const cateringDetails = item.serviceType === "catering" ? `<div class="offer-tags">${item.cuisines.map(value => `<span>${value}</span>`).join("")}${item.menuStyles.map(value => `<span>Menu: ${value}</span>`).join("")}${item.servingStyles.map(value => `<span>${value}</span>`).join("")}${item.dietary.map(value => `<span>${value}</span>`).join("")}</div><p class="allergen-note"><strong>Allergy handling:</strong> ${item.allergenNote}</p><small class="delivery-window">Delivery/setup: ${item.deliveryWindow}</small>` : "";
+  const coverImage = item.imagePreviewUrl ? `<span class="offer-cover"><img src="${item.imagePreviewUrl}" alt="${escapeHtml(item.name)} sample"></span>` : "";
   const statusHeading = !status.available ? "Unavailable for this booking" : status.confirmationRequested ? "Vendor response pending" : status.requiresConfirmation ? "Vendor confirmation required" : status.confirmed ? "✓ Vendor-confirmed for these requirements" : "✓ Available and compatible";
   return `<label class="vendor-offer-card ${status.available ? "available" : "unavailable"} ${status.requiresConfirmation ? "confirmation-required" : ""} ${selected ? "selected" : ""}">
     <input class="vendor-radio" type="radio" name="vendor-${item.serviceType}" value="${item.id}" data-service-type="${item.serviceType}" ${selected ? "checked" : ""} ${status.available ? "" : "disabled"}>
-    <span class="offer-card-content"><span class="offer-card-top"><span><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${item.name}</strong><small>${item.vendor}</small></span><span class="offer-price"><strong>${money(servicePrice(item))}</strong><small>${servicePriceBreakdown(item)}</small></span></span>
+    <span class="offer-card-content">${coverImage}<span class="offer-card-top"><span><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.vendor)}</small></span><span class="offer-price"><strong>${money(servicePrice(item))}</strong><small>${servicePriceBreakdown(item)}</small></span></span>
     <span class="offer-rating" aria-label="${reviews.rating?.toFixed(1) || "New"} out of 5 from ${reviews.count} verified prototype bookings"><span aria-hidden="true">★</span> ${reviews.rating?.toFixed(1) || "New"} <small>(${reviews.count} verified review${reviews.count === 1 ? "" : "s"})</small></span>
-    <span class="offer-description">${item.description}</span>${recentReview ? publicReviewCard(recentReview, true) : ""}<span class="offer-inclusions">${item.inclusions.map(value => `<span>✓ ${value}</span>`).join("")}</span>
+    <span class="offer-description">${escapeHtml(item.description)}</span>${recentReview ? publicReviewCard(recentReview, true) : ""}<span class="offer-inclusions">${item.inclusions.map(value => `<span>✓ ${escapeHtml(value)}</span>`).join("")}</span>
     <span class="offer-facts"><span>Capacity: ${item.minGuests}–${item.maxGuests}; requested ${serviceQuantity(item)}</span><span>Lead time: ${item.minLeadDays}+ days</span><span>Provider hold: ${formatTime(bookingData.start)}–${formatTime(bookingData.end)} · setup/teardown included</span></span>${cateringDetails}
     <span class="cancellation-summary"><strong>Cancellation & changes:</strong> ${cancellationPolicyFor(item)}</span>
     <span class="offer-status ${status.available ? status.requiresConfirmation ? "pending" : "" : "blocked"}"><strong>${statusHeading}</strong><small>${status.message}</small></span></span>
@@ -893,6 +1148,51 @@ function cateringFilterPanel(preferences) {
   const dietaryOptions = ["Vegetarian", "Vegan", "Halal", "Gluten-aware"];
   const allergyOptions = [{ value: "nut", label: "Nut / cross-contact" }, { value: "gluten", label: "Gluten / celiac" }, { value: "dairy", label: "Dairy" }];
   return `<section class="catering-filter-panel" aria-labelledby="catering-filter-title"><div><span class="vendor-category">Catering requirements</span><h3 id="catering-filter-title">Find a catering package that fits</h3><p>Select every requirement that applies. Capabilities are vendor-reported; material allergy requests require written vendor confirmation before payment because shared-kitchen cross-contact may remain possible.</p></div><div class="catering-filter-grid"><label>Cuisine<select id="catering-cuisine"><option value="any" ${preferences.cuisine === "any" ? "selected" : ""}>Any cuisine</option><option value="Canadian" ${preferences.cuisine === "Canadian" ? "selected" : ""}>Canadian</option><option value="Indian" ${preferences.cuisine === "Indian" ? "selected" : ""}>Indian</option><option value="South Asian" ${preferences.cuisine === "South Asian" ? "selected" : ""}>South Asian</option><option value="Italian" ${preferences.cuisine === "Italian" ? "selected" : ""}>Italian</option><option value="Mediterranean" ${preferences.cuisine === "Mediterranean" ? "selected" : ""}>Mediterranean</option></select></label><label>Menu preference<select id="catering-menu"><option value="any" ${preferences.menu === "any" ? "selected" : ""}>Any menu</option><option value="Classic comfort" ${preferences.menu === "Classic comfort" ? "selected" : ""}>Classic / comfort</option><option value="Kids-friendly" ${preferences.menu === "Kids-friendly" ? "selected" : ""}>Kids-friendly</option><option value="Vegetarian-forward" ${preferences.menu === "Vegetarian-forward" ? "selected" : ""}>Vegetarian-forward</option><option value="South Asian" ${preferences.menu === "South Asian" ? "selected" : ""}>South Asian menu</option><option value="Italian" ${preferences.menu === "Italian" ? "selected" : ""}>Italian menu</option></select></label><fieldset class="filter-check-group"><legend>Dietary support · choose all</legend><div>${dietaryOptions.map(value => `<label><input class="catering-dietary" type="checkbox" value="${value}" ${preferences.dietary.includes(value) ? "checked" : ""}> ${value}</label>`).join("")}</div></fieldset><fieldset class="filter-check-group"><legend>Allergy review · choose all</legend><div>${allergyOptions.map(option => `<label><input class="catering-allergy" type="checkbox" value="${option.value}" ${preferences.allergies.includes(option.value) ? "checked" : ""}> ${option.label}</label>`).join("")}</div></fieldset><label>Serving style<select id="catering-style"><option value="any" ${preferences.servingStyle === "any" ? "selected" : ""}>Any serving style</option><option value="Buffet" ${preferences.servingStyle === "Buffet" ? "selected" : ""}>Buffet</option><option value="Drop-off" ${preferences.servingStyle === "Drop-off" ? "selected" : ""}>Drop-off</option><option value="Family-style" ${preferences.servingStyle === "Family-style" ? "selected" : ""}>Family-style</option><option value="Plated" ${preferences.servingStyle === "Plated" ? "selected" : ""}>Plated</option></select></label><label class="full">Dietary/allergy notes for vendor confirmation<textarea id="catering-notes" rows="2" placeholder="Example: one guest has a severe peanut allergy; confirm ingredients and cross-contact controls.">${escapeHtml(preferences.notes)}</textarea></label></div></section>`;
+}
+
+function configurationChoicePrice(choice) {
+  if (!choice.price) return "Included";
+  const suffix = choice.priceType === "per_person" ? " / guest" : choice.priceType === "hourly" ? " / hour" : choice.priceType === "per_unit" ? " / unit" : "";
+  return `+${money(choice.price)}${suffix}`;
+}
+
+function organizerServiceConfigurator(service) {
+  const configuration = configurationFor(service);
+  const schema = configurationSchemaFor(service);
+  if (!schema.length) return `<section class="service-configurator fixed-package" id="service-configurator" aria-labelledby="service-configurator-title"><div class="configurator-head"><div><span class="eyebrow">Ready-made package</span><h3 id="service-configurator-title">${escapeHtml(service.name)}</h3><p>${escapeHtml(service.vendor)} publishes this as a fixed package with no organizer choices. The displayed scope and price are what will be saved with the order.</p></div><div class="config-total"><span>Package price</span><strong>${money(servicePrice(service))}</strong><small>No configuration required</small></div></div><div class="configuration-status ready" role="status"><strong>✓ Ready for checkout</strong><span>Availability and price will be checked again before payment.</span></div></section>`;
+  const status = configurationStatus(service);
+  const referenceFile = organizerReferenceFiles[service.id];
+  const fields = schema.map(group => {
+    const value = configuration.selections[group.id];
+    if (group.type === "single") return `<fieldset class="config-field config-field-wide"><legend>${group.label}${group.required ? " *" : ""}</legend>${group.help ? `<p>${group.help}</p>` : ""}<div class="config-choice-grid">${group.options.map(choice => `<label class="config-choice"><input type="radio" name="config-${service.id}-${group.id}" data-config-service="${service.id}" data-config-group="${group.id}" value="${choice.id}" ${value === choice.id ? "checked" : ""}><span><strong>${choice.label}</strong><small>${configurationChoicePrice(choice)}${choice.bookingMode === "quote" ? " · Quote required" : ""}</small></span></label>`).join("")}</div></fieldset>`;
+    if (group.type === "multi") {
+      const selected = Array.isArray(value) ? value : [];
+      return `<fieldset class="config-field config-field-wide"><legend>${group.label}${group.required ? " *" : ""}</legend><p>${group.help || `${group.min ? `Choose at least ${group.min}` : "Optional"}${group.max ? ` and no more than ${group.max}` : ""}.`}</p><div class="config-choice-grid">${group.options.map(choice => `<label class="config-choice"><input type="checkbox" data-config-service="${service.id}" data-config-group="${group.id}" data-config-max="${group.max || ""}" value="${choice.id}" ${selected.includes(choice.id) ? "checked" : ""}><span><strong>${choice.label}</strong><small>${configurationChoicePrice(choice)}</small></span></label>`).join("")}</div></fieldset>`;
+    }
+    if (group.type === "textarea") return `<label class="config-field config-field-wide"><span>${group.label}${group.required ? " *" : ""}</span><textarea data-config-service="${service.id}" data-config-group="${group.id}" rows="3" placeholder="${escapeHtml(group.placeholder || "")}" ${group.required ? "required" : ""}>${escapeHtml(value || "")}</textarea></label>`;
+    return `<label class="config-field"><span>${group.label}${group.required ? " *" : ""}</span><input type="${group.type === "time" ? "time" : "text"}" data-config-service="${service.id}" data-config-group="${group.id}" value="${escapeHtml(value || "")}" placeholder="${escapeHtml(group.placeholder || "")}" ${group.maxLength ? `maxlength="${group.maxLength}"` : ""} ${group.required ? "required" : ""}></label>`;
+  }).join("");
+  const referenceUpload = status.referenceRequired ? `<div class="config-reference config-field-wide"><div><span class="config-label">Custom design reference *</span><p>Private upload visible only to you and ${escapeHtml(service.vendor)}<br>Accepted files: JPG, PNG, or WebP; maximum ${MAX_IMAGE_LABEL}. Uploading a reference does not mean the vendor has accepted or can reproduce it.</p></div>${referenceFile ? `<div class="upload-preview"><img src="${referenceFile.previewUrl}" alt="Custom reference preview"><div><strong>${escapeHtml(configuration.referenceImage.name)}</strong><span>${(configuration.referenceImage.size / 1024 / 1024).toFixed(2)} MB · local prototype preview</span><span class="upload-actions"><label class="text-button" for="organizer-reference-${service.id}">Replace</label><button class="text-button" type="button" data-remove-reference="${service.id}">Remove</button></span></div></div>` : `<label class="upload-drop" for="organizer-reference-${service.id}"><strong>Upload reference image</strong><span>JPG, PNG, or WebP · up to ${MAX_IMAGE_LABEL}</span></label>`}<input class="visually-hidden organizer-reference-input" id="organizer-reference-${service.id}" type="file" accept="image/jpeg,image/png,image/webp" data-reference-service="${service.id}" aria-describedby="reference-help-${service.id}"><small id="reference-help-${service.id}">Client-side validation is repeated securely by the server in production.</small><div class="upload-error" id="reference-error-${service.id}" role="alert" ${configuration.imageError ? "" : "hidden"}>${escapeHtml(configuration.imageError || "")}</div></div>` : "";
+  const quotePanel = status.quoteRequired ? `<div class="quote-gate config-field-wide"><div><strong>${configuration.quote.status === "quoted" ? "✓ Vendor quote accepted" : configuration.quote.status === "requested" ? "Vendor quote requested" : "Custom work needs a quote"}</strong><span>${status.message}</span>${configuration.quote.status === "quoted" ? `<small>${configuration.quote.reference} · custom-work adjustment ${money(configuration.quote.amount)}</small>` : ""}</div>${status.complete && configuration.quote.status === "none" ? `<button class="button button-dark" type="button" data-request-quote="${service.id}">Request itemized quote</button>` : status.complete && configuration.quote.status === "requested" ? `<button class="button button-dark" type="button" data-simulate-quote="${service.id}">Simulate vendor quote</button>` : ""}</div>` : "";
+  return `<section class="service-configurator" id="service-configurator" aria-labelledby="service-configurator-title"><div class="configurator-head"><div><span class="eyebrow">Step 2 · Configure the selected package</span><h3 id="service-configurator-title">Customize ${escapeHtml(service.name)}</h3><p>${escapeHtml(service.vendor)} defines the available choices and prices. Required included selections may be changed without adding cost; premium choices update the total immediately.</p></div><div class="config-total"><span>Configured price</span><strong>${money(servicePrice(service))}</strong><small>${configurationPrice(service) ? `${money(configurationPrice(service))} in selected options` : "No paid options added"}</small></div></div><div class="configuration-fields">${fields}${referenceUpload}</div>${quotePanel}<div class="configuration-status ${status.ready ? "ready" : "attention"}" role="status"><strong>${status.ready ? "✓ Ready for checkout" : status.quoteRequired ? "Quote required" : "Configuration incomplete"}</strong><span>${status.message}</span></div></section>`;
+}
+
+function liveConfigurationSummary(service) {
+  const configuration = configurationFor(service);
+  const schema = configurationSchemaFor(service);
+  const rows = schema.map(group => {
+    const value = configuration.selections[group.id];
+    if (group.options) {
+      const values = Array.isArray(value) ? value : [value];
+      const labels = values.map(id => group.options.find(item => item.id === id)?.label).filter(Boolean);
+      return labels.length ? `<small><strong>${group.label}:</strong> ${labels.join(", ")}</small>` : "";
+    }
+    return String(value || "").trim() ? `<small><strong>${group.label}:</strong> ${escapeHtml(value)}</small>` : "";
+  }).filter(Boolean).join("");
+  const reference = configuration.referenceImage ? `<small><strong>Private reference:</strong> ${escapeHtml(configuration.referenceImage.name)} · ${(configuration.referenceImage.size / 1024 / 1024).toFixed(2)} MB</small>` : "";
+  const quote = configuration.quote?.status === "quoted" ? `<small><strong>Accepted vendor quote:</strong> ${configuration.quote.reference} · ${money(configuration.quote.amount)}</small>` : "";
+  const catering = service.serviceType === "catering" ? `<small><strong>Dietary/allergy request:</strong> ${bookingData.cateringPreferences.dietary.length ? bookingData.cateringPreferences.dietary.join(", ") : "none selected"}${bookingData.cateringPreferences.allergies.length ? ` · vendor-confirmed review: ${bookingData.cateringPreferences.allergies.join(", ")}` : ""}</small>${bookingData.cateringPreferences.notes ? `<small><strong>Organizer note:</strong> ${escapeHtml(bookingData.cateringPreferences.notes)}</small>` : ""}` : "";
+  return `<div class="saved-configuration">${rows}${reference}${quote}${catering}</div>`;
 }
 
 function addonStageNav() {
@@ -937,8 +1237,10 @@ function serviceCategoryCard(type) {
   const selectedStatus = selected ? vendorAvailability(selected) : null;
   const lowest = available.length ? Math.min(...available.map(servicePrice)) : null;
   const recommended = recommendedServiceTypeIds().has(type.id);
-  const needsAttention = selected && !selectedStatus.available;
-  return `<button class="service-category-card ${selected ? "selected" : ""} ${needsAttention ? "attention" : ""}" type="button" data-service-category="${type.id}"><span class="classification-label ${needsAttention ? "attention" : recommended ? "recommended" : "optional"}">${needsAttention ? "Needs attention" : recommended ? `Recommended for ${currentPurpose().shortLabel}` : "Compatible option"}</span><span class="service-category-head"><strong>${type.label}</strong><b>${lowest === null ? "No current match" : `From ${money(lowest)}`}</b></span><span>${type.description}</span><small>${available.length} currently available package${available.length === 1 ? "" : "s"}${selected ? ` · Selected: ${selected.name}` : ""}</small>${needsAttention ? `<small class="attention-copy">${selectedStatus.message} This item is excluded from the amount due until you replace or remove it.</small>` : ""}<em>${selected ? "Review or change provider →" : "Compare providers →"}</em></button>`;
+  const selectedConfigurationStatus = selected ? configurationStatus(selected) : null;
+  const needsAttention = selected && (!selectedStatus.available || !selectedConfigurationStatus.ready);
+  const attentionCopy = !selected ? "" : !selectedStatus.available ? `${selectedStatus.message} This item is excluded from the amount due until you replace or remove it.` : selectedConfigurationStatus.message;
+  return `<button class="service-category-card ${selected ? "selected" : ""} ${needsAttention ? "attention" : ""}" type="button" data-service-category="${type.id}"><span class="classification-label ${needsAttention ? "attention" : recommended ? "recommended" : "optional"}">${needsAttention ? "Needs attention" : recommended ? `Recommended for ${currentPurpose().shortLabel}` : "Compatible option"}</span><span class="service-category-head"><strong>${type.label}</strong><b>${lowest === null ? "No current match" : `From ${money(lowest)}`}</b></span><span>${type.description}</span><small>${available.length} currently available package${available.length === 1 ? "" : "s"}${selected ? ` · Selected: ${selected.name}` : ""}</small>${needsAttention ? `<small class="attention-copy">${attentionCopy}</small>` : ""}<em>${selected ? "Review, customize, or change provider →" : "Compare providers →"}</em></button>`;
 }
 
 function eventServicesStage() {
@@ -949,16 +1251,17 @@ function eventServicesStage() {
   const selectedTypeIds = new Set(selectedVendorServices().map(service => service.serviceType));
   const visibleTypes = showAllServiceTypes ? compatibleTypes : compatibleTypes.filter(type => recommendedIds.has(type.id) || selectedTypeIds.has(type.id));
   const activeType = compatibleTypes.find(type => type.id === activeServiceType);
+  const activeSelectedService = activeType ? selectedVendorServices().find(service => service.serviceType === activeType.id) : null;
   const vendorStatus = selectedVendorAvailability();
   const pendingConfirmation = vendorStatus.pendingConfirmations[0];
   const confirmationRequestSent = pendingConfirmation && hasCurrentAllergyConfirmationRequest(pendingConfirmation);
   const fit = eventCompatibility();
   const canReview = fit.status === "allowed" && vendorStatus.ready;
-  const primaryLabel = fit.status !== "allowed" ? "Venue approval required before payment" : pendingConfirmation ? "Await vendor confirmation" : vendorStatus.available ? "Review and pay →" : "Resolve selected service";
+  const primaryLabel = fit.status !== "allowed" ? "Venue approval required before payment" : pendingConfirmation ? "Await vendor confirmation" : vendorStatus.pendingQuotes.length ? "Complete vendor quote" : vendorStatus.incompleteConfigurations.length ? "Complete package choices" : vendorStatus.available ? "Review and pay →" : "Resolve selected service";
   const hasHiddenTypes = visibleTypes.length < compatibleTypes.length;
   const attention = vendorStatus.unavailable.length ? `<div class="selection-attention" role="alert"><strong>${vendorStatus.unavailable.length} selected service${vendorStatus.unavailable.length === 1 ? " needs" : "s need"} attention</strong><span>${vendorStatus.unavailable.map(item => `${item.name}: ${vendorAvailability(item).message}`).join(" ")} Open the marked category to replace or remove it. It is not included in the amount due.</span></div>` : "";
   const overview = `${attention}<div class="service-category-grid">${visibleTypes.map(serviceCategoryCard).join("") || `<div class="empty-service-guidance"><strong>No service category is automatically recommended.</strong><span>That does not mean services are prohibited. Browse every option this facility supports.</span></div>`}</div>${showAllServiceTypes || !hasHiddenTypes ? '<p class="all-services-note">Showing every service category with at least one package configured for this facility.</p>' : `<button class="browse-all-services" type="button" id="browse-all-services">Browse all services allowed at this venue (${compatibleTypes.length})</button>`}`;
-  const comparison = activeType ? `<div class="vendor-marketplace-head compact"><div><span class="eyebrow">Independent event-service marketplace</span><h3>${activeType.label}</h3><p>Compare exact packages by fit, availability, total price, rating, reviews, and supplier terms. Unavailable lower-priced packages remain visible with a reason.</p></div><label>Sort providers<select id="vendor-sort"><option value="best-match" ${vendorSort === "best-match" ? "selected" : ""}>Best match</option><option value="price" ${vendorSort === "price" ? "selected" : ""}>Price: low to high</option><option value="rating" ${vendorSort === "rating" ? "selected" : ""}>Rating: high to low</option></select></label></div>${activeType.id === "catering" ? cateringFilterPanel(preferences) : ""}<p id="vendor-filter-status" class="visually-hidden" role="status" aria-live="polite"></p><div class="vendor-comparison">${vendorComparisonGroup(activeType)}</div><button class="button button-light service-done" type="button" data-service-done>← Back to service categories</button>` : overview;
+  const comparison = activeType ? `<div class="vendor-marketplace-head compact"><div><span class="eyebrow">Independent event-service marketplace</span><h3>${activeType.label}</h3><p>First compare provider packages. Then configure the selected package using only choices and prices published by that vendor.</p></div><label>Sort providers<select id="vendor-sort"><option value="best-match" ${vendorSort === "best-match" ? "selected" : ""}>Best match</option><option value="price" ${vendorSort === "price" ? "selected" : ""}>Price: low to high</option><option value="rating" ${vendorSort === "rating" ? "selected" : ""}>Rating: high to low</option></select></label></div>${activeType.id === "catering" ? cateringFilterPanel(preferences) : ""}<p id="vendor-filter-status" class="visually-hidden" role="status" aria-live="polite"></p><div class="vendor-comparison">${vendorComparisonGroup(activeType)}</div>${activeSelectedService ? organizerServiceConfigurator(activeSelectedService) : '<div class="configuration-empty"><strong>Select a provider package to customize it.</strong><span>Menus, designs, service options, and vendor-defined prices appear after selection.</span></div>'}<button class="button button-light service-done" type="button" data-service-done>← Back to service categories</button>` : overview;
   return `<section class="addon-stage" aria-labelledby="addon-stage-title"><span class="eyebrow">Add-ons · Step 3 of 3</span><h2 id="addon-stage-title">${activeType ? `Compare ${activeType.label.toLowerCase()}` : "Choose an event-service category"}</h2><p>${activeType ? "Choose one package or skip this category. Your selections in other categories stay saved." : `Recommended for your ${currentPurpose().shortLabel.toLowerCase()}, with a general facility-compatible catalogue available.`}</p><form id="addon-form">${comparison}<div class="vendor-policy-note"><strong>Independent suppliers</strong><span>Every selected provider remains responsible for its package, cancellation terms, availability, fulfilment, tax profile, and supplier invoice. Optional recommendations are never preselected.</span></div>${pendingConfirmation ? `<div class="confirmation-gate"><div><strong>${confirmationRequestSent ? "Vendor response pending" : "Written allergy confirmation required"}</strong><span>${confirmationRequestSent ? `The request was sent to ${pendingConfirmation.vendor}. Payment remains blocked until that vendor responds.` : `${pendingConfirmation.vendor} must confirm the selected allergy and cross-contact requirements before its order can be paid and confirmed.`}</span>${confirmationRequestSent ? '<small class="prototype-note">Prototype test control: the next action simulates a response from an authenticated vendor user. Organizers cannot approve their own request in production.</small>' : ""}</div>${confirmationRequestSent ? `<button class="button button-dark" type="button" id="simulate-vendor-confirmation" data-service-id="${pendingConfirmation.id}">Simulate vendor-confirmed response</button>` : `<button class="button button-dark" type="button" id="request-vendor-confirmation" data-service-id="${pendingConfirmation.id}">Send confirmation request</button>`}</div>` : ""}${fit.status !== "allowed" ? `<div class="checkout-block"><strong>${fit.label}</strong><span>${fit.detail}</span><button class="text-button" type="button" data-change-purpose>Change purpose or event answers</button></div>` : ""}<div class="booking-actions"><button class="button button-light" type="button" data-addon-stage="venue">← Venue options</button><button class="button button-green" type="submit" ${canReview ? "" : "disabled"}>${primaryLabel}</button></div></form></section>`;
 }
 
@@ -983,10 +1286,8 @@ function reviewForm() {
     const reviews = vendorReviewSummary(item);
     const subtotal = servicePrice(item);
     const supplierTax = taxFor(subtotal, item.taxProfile);
-    const preferences = bookingData.cateringPreferences;
-    const cateringConfiguration = item.serviceType === "catering" ? `<small>Catering request: ${preferences.cuisine === "any" ? "any listed cuisine" : preferences.cuisine} · ${preferences.menu === "any" ? "any listed menu" : preferences.menu} · ${preferences.servingStyle === "any" ? "any serving style" : preferences.servingStyle} · ${preferences.dietary.length ? preferences.dietary.join(", ") : "no dietary filter"}${preferences.allergies.length ? ` · allergy review: ${preferences.allergies.join(", ")}` : ""}</small>${preferences.notes ? `<small>Organizer note: ${escapeHtml(preferences.notes)}</small>` : ""}` : "";
-    const quantityConfiguration = ["face-painting", "cake"].includes(item.serviceType) ? `<small>Selected quantity: ${serviceQuantity(item)} ${item.serviceType === "cake" ? "servings" : "participants"}</small>` : "";
-    return `<article class="review-vendor-order"><div><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${item.name}</strong><small>${item.vendor} · ${reviews.rating?.toFixed(1) || "New"} ★ from ${reviews.count} verified prototype reviews</small>${item.pricing.type === "per_person" ? `<small>Pricing basis: ${servicePriceBreakdown(item)}</small>` : ""}${quantityConfiguration}${cateringConfiguration}<small><strong>Cancellation & changes:</strong> ${cancellationPolicyFor(item)}</small></div><div class="review-vendor-money"><span>${money(subtotal)}</span><small>${item.taxProfile.label}: ${money(supplierTax)}</small><strong>${money(subtotal + supplierTax)} supplier total</strong></div><span class="mini-status ${status.available && !status.requiresConfirmation ? "" : "pending"}">${status.available && !status.requiresConfirmation ? "✓" : "!"} ${status.message}</span></article>`;
+    const configuration = configurationStatus(item);
+    return `<article class="review-vendor-order"><div><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.vendor)} · ${reviews.rating?.toFixed(1) || "New"} ★ from ${reviews.count} verified prototype reviews</small><small>Pricing basis: ${servicePriceBreakdown(item)}</small>${liveConfigurationSummary(item)}<small><strong>Cancellation & changes:</strong> ${cancellationPolicyFor(item)}</small></div><div class="review-vendor-money"><span>${money(subtotal)}</span><small>${item.taxProfile.label}: ${money(supplierTax)}</small><strong>${money(subtotal + supplierTax)} supplier total</strong></div><span class="mini-status ${status.available && !status.requiresConfirmation && configuration.ready ? "" : "pending"}">${status.available && !status.requiresConfirmation && configuration.ready ? "✓ Ready" : `! ${configuration.message || status.message}`}</span></article>`;
   }).join("");
   return `<div class="booking-panel"><div class="form-card"><h2>Review and pay</h2><p>${canPay ? "The venue and every selected vendor currently show available and compatible. Any disclosed allergy review has vendor confirmation. We’ll recheck all service windows once more when you confirm and pay." : fit.status !== "allowed" ? `${fit.label}. The venue must approve this use before payment.` : "One or more selected vendor service is unavailable or still needs written confirmation. Return to provider comparison before payment."}</p><div class="content-block"><h3>Booking details</h3><p><strong>${currentPurpose().label}</strong><br>${bookingData.guests} attendees · ${formatTime(bookingData.start)}–${formatTime(bookingData.end)}${selectedNeedLabels.length ? `<br>Activity details: ${selectedNeedLabels.join(", ")}` : ""}</p>${organizerDetails ? `<p class="block-note"><strong>${bookingData.purposeId === "other-permitted" ? "Activity description" : "Organizer notes"}:</strong> ${escapeHtml(organizerDetails)}</p>` : ""}<div class="purpose-fit ${fit.status}"><strong>${fit.label}</strong><span>${fit.detail}</span></div></div><div class="content-block"><h3>Venue add-ons and requirements</h3><p>${selectedAddons.length ? selectedAddons.map(item => `✓ ${item.name}${requiredAddonIds.has(item.id) ? " · Required" : " · Optional"}`).join("<br>") : "No venue add-ons selected or required."}</p></div><div class="content-block"><h3>Independent vendor orders</h3>${vendors.length ? vendorReview : "<p>No independent vendor services selected.</p>"}<p class="block-note">Each provider issues a separate supplier invoice. Package-specific cancellation summaries are shown above; Gather’s seller-funded commission is not added as a separate customer charge.</p></div><div class="content-block"><h3>Security deposit</h3><p>${totals.deposit ? `${money(totals.deposit)} is collected separately at checkout for this sample booking. After the event, the venue team follows its configured deadline to release it or submit an itemized claim with evidence.` : "No security deposit is required for this space."}</p></div><div class="payment-panel"><div><span class="secure-icon">🔒</span><strong>Payment details (prototype)</strong><small>Demo only — no card details are collected or processed.</small></div><div class="mock-card-field">Card number &nbsp; •••• •••• •••• 4242</div><div class="mock-card-row"><span>Expiry &nbsp; 12/29</span><span>CVC &nbsp; •••</span></div><p class="prototype-note">This interactive prototype does not create a charge or reservation.</p></div><label class="option terms"><span><input id="agree" type="checkbox" required> &nbsp; I reviewed and agree to the venue rules, the visible package-specific vendor cancellation/change terms, and the security-deposit policy when applicable.</span></label><div style="margin-top:24px"><button class="button button-light" id="booking-back">← Back</button> <button class="button button-green" id="confirm-booking" ${canPay ? "" : "disabled"}>${canPay ? `Confirm and pay ${cadMoney(totals.dueNow)}` : fit.status !== "allowed" ? "Venue approval required" : "Return to provider comparison"}</button></div></div>${summaryCard()}</div>`;
 }
@@ -1002,16 +1303,18 @@ function successPage() {
 function vendorInvoiceDocument(item, snapshot) {
   const vendorTax = taxFor(item.price, item.taxProfile);
   const selectedConfiguration = item.selectedConfiguration || {};
-  const quantityConfiguration = ["face-painting", "cake"].includes(item.serviceType)
-    ? `<div class="key-value"><span>Selected quantity</span><strong>${selectedConfiguration.quantity} ${item.serviceType === "cake" ? "servings" : "participants"}</strong></div>`
-    : "";
-  const dietaryRequirements = selectedConfiguration.dietaryRequirements || [];
-  const allergyRequirements = selectedConfiguration.allergyRequirements || [];
-  const cateringConfiguration = item.serviceType === "catering" ? `<div class="key-value"><span>Guests</span><strong>${selectedConfiguration.guests}</strong></div><div class="key-value"><span>Cuisine / menu / style</span><strong>${selectedConfiguration.cuisine === "any" ? "Any listed cuisine" : selectedConfiguration.cuisine} · ${selectedConfiguration.menu === "any" ? "Any listed menu" : selectedConfiguration.menu} · ${selectedConfiguration.servingStyle === "any" ? "Any listed style" : selectedConfiguration.servingStyle}</strong></div><div class="key-value"><span>Dietary requirements</span><strong>${dietaryRequirements.length ? dietaryRequirements.join(", ") : "None selected"}</strong></div><div class="key-value"><span>Allergy review</span><strong>${allergyRequirements.length ? `${allergyRequirements.join(", ")} · vendor-confirmed` : "None requested"}</strong></div>${selectedConfiguration.notes ? `<p>Organizer note: ${escapeHtml(selectedConfiguration.notes)}</p>` : ""}<p>${escapeHtml(item.allergenNote)}</p>` : "";
+  const configurationRows = (selectedConfiguration.selections || []).map(group => {
+    const value = group.choices?.length ? group.choices.map(choice => `${choice.label}${choice.price ? ` (+${money(choice.price)})` : ""}`).join(", ") : group.value;
+    return value ? `<div class="key-value"><span>${escapeHtml(group.label)}</span><strong>${escapeHtml(value)}</strong></div>` : "";
+  }).join("");
+  const referenceConfiguration = selectedConfiguration.referenceImage ? `<div class="key-value"><span>Private reference image</span><strong>${escapeHtml(selectedConfiguration.referenceImage.name)} · ${(selectedConfiguration.referenceImage.size / 1024 / 1024).toFixed(2)} MB</strong></div>` : "";
+  const quoteConfiguration = selectedConfiguration.quote ? `<div class="key-value"><span>Accepted vendor quote</span><strong>${escapeHtml(selectedConfiguration.quote.reference)} · ${money(selectedConfiguration.quote.amount)}</strong></div>` : "";
+  const cateringRequirements = selectedConfiguration.cateringRequirements;
+  const cateringConfiguration = cateringRequirements ? `<div class="key-value"><span>Dietary requirements</span><strong>${cateringRequirements.dietary.length ? cateringRequirements.dietary.join(", ") : "None selected"}</strong></div><div class="key-value"><span>Allergy review</span><strong>${cateringRequirements.allergies.length ? `${cateringRequirements.allergies.join(", ")} · vendor-confirmed` : "None requested"}</strong></div>${cateringRequirements.notes ? `<p>Organizer note: ${escapeHtml(cateringRequirements.notes)}</p>` : ""}<p>${escapeHtml(item.allergenNote || "")}</p>` : "";
   const setupMinutes = item.serviceWindow?.setupMinutes || 0;
   const teardownMinutes = item.serviceWindow?.teardownMinutes || 0;
   const confirmation = item.allergyConfirmation ? `<div class="key-value"><span>Requirement confirmation</span><strong>${item.allergyConfirmation.status} · ${item.allergyConfirmation.source}</strong></div>` : "";
-  return `<article class="statement-sheet"><div class="statement-head"><div><span class="document-type">Supplier invoice · Independent vendor</span><h2>${item.vendor}</h2><p>Invoice INV-${item.invoicePrefix}-${snapshot.reference} · Issued at booking · ${item.taxProfile.id}</p></div><strong>${money(item.price + vendorTax)}</strong></div><div class="statement-section"><div class="key-value"><span>Bill to</span><strong>${escapeHtml(snapshot.booking.contact)}</strong></div></div><div class="money-table"><div><span>${item.name}</span><span>${money(item.price)}</span></div><div><span>${item.taxProfile.label}</span><span>${money(vendorTax)}</span></div><div class="money-total"><span>Vendor invoice total</span><span>${money(item.price + vendorTax)}</span></div></div><div class="statement-section"><h3>Saved service configuration</h3><div class="key-value"><span>Pricing basis</span><strong>${item.pricingBasis}</strong></div><div class="key-value"><span>Provider hold</span><strong>${item.serviceWindow.start}–${item.serviceWindow.end}</strong></div><div class="key-value"><span>Setup / teardown inside hold</span><strong>${setupMinutes} / ${teardownMinutes} minutes</strong></div>${quantityConfiguration}${cateringConfiguration}${confirmation}<p><strong>Cancellation & changes:</strong> ${item.cancellationPolicy}</p></div><p class="document-footnote">Gather does not add vendor commission as a separate customer charge. The vendor’s commercial fee is documented in its own settlement.</p></article>`;
+  return `<article class="statement-sheet"><div class="statement-head"><div><span class="document-type">Supplier invoice · Independent vendor</span><h2>${escapeHtml(item.vendor)}</h2><p>Invoice INV-${item.invoicePrefix}-${snapshot.reference} · Issued at booking · ${item.taxProfile.id}</p></div><strong>${money(item.price + vendorTax)}</strong></div><div class="statement-section"><div class="key-value"><span>Bill to</span><strong>${escapeHtml(snapshot.booking.contact)}</strong></div></div><div class="money-table"><div><span>${escapeHtml(item.name)}</span><span>${money(item.price)}</span></div><div><span>${item.taxProfile.label}</span><span>${money(vendorTax)}</span></div><div class="money-total"><span>Vendor invoice total</span><span>${money(item.price + vendorTax)}</span></div></div><div class="statement-section"><h3>Saved service configuration</h3><div class="key-value"><span>Pricing basis</span><strong>${item.pricingBasis}</strong></div><div class="key-value"><span>Selected quantity</span><strong>${selectedConfiguration.quantity || selectedConfiguration.guests}</strong></div><div class="key-value"><span>Provider hold</span><strong>${item.serviceWindow.start}–${item.serviceWindow.end}</strong></div><div class="key-value"><span>Setup / teardown inside hold</span><strong>${setupMinutes} / ${teardownMinutes} minutes</strong></div>${configurationRows}${referenceConfiguration}${quoteConfiguration}${cateringConfiguration}${confirmation}<p><strong>Cancellation & changes:</strong> ${item.cancellationPolicy}</p></div><p class="document-footnote">This invoice preserves the package version, organizer choices, price adjustments, and accepted quote used at confirmation. Later catalogue edits do not rewrite it.</p></article>`;
 }
 
 function bookingDocumentsPage() {
@@ -1066,7 +1369,7 @@ function dashboardShell(active, content) {
   const contextType = role?.accountType || "venue";
   const navByContext = {
     venue: [["role-home", "◎", "Role & permissions"], ["dashboard", "▦", "Overview"], ["settlement", "✓", "Event closeout"], ["deposit", "◇", "Deposit case"], ["payments", "$", "Payouts & documents"], ["venue-terms", "⚙", "Commercial terms"]],
-    vendor: [["role-home", "◎", "Role & permissions"], ["vendor-dashboard", "▦", "Vendor overview"], ["vendor-invoice", "▤", "Supplier invoice"], ["vendor-payout", "◇", "Payout statement"]],
+    vendor: [["role-home", "◎", "Role & permissions"], ["vendor-dashboard", "▦", "Vendor overview"], ["vendor-offerings", "✦", "Offerings"], ["vendor-invoice", "▤", "Supplier invoice"], ["vendor-payout", "◇", "Payout statement"]],
     platform: [["role-home", "◎", "Role & permissions"], ["platform-dashboard", "▦", "Platform console"], ["fee-settings", "⚙", "Commercial terms"]]
   };
   const navItems = (navByContext[contextType] || navByContext.venue).filter(([route]) => canAccessRoute(route));
@@ -1758,6 +2061,243 @@ function platformDashboardPage() {
   return dashboardShell("platform-dashboard", content);
 }
 
+function vendorOptionGroupsTemplate(serviceType, customRequestsAllowed = true) {
+  const syntheticService = {
+    id: `vendor-template-${serviceType}`,
+    serviceType,
+    customRequestsAllowed,
+    servingStyles: ["Buffet", "Drop-off", "Plated"]
+  };
+  return JSON.parse(JSON.stringify(categoryConfigurationSchemaFor(syntheticService))).map(group => ({
+    ...group,
+    enabled: true,
+    options: group.options?.map(choice => ({ ...choice, enabled: true }))
+  }));
+}
+
+function cloneOptionGroups(groups) {
+  return JSON.parse(JSON.stringify(groups || []));
+}
+
+function offeringDraftFromService(service) {
+  const customRequestsAllowed = service.customRequestsAllowed ?? ["cake", "decor", "photo-booth", "catering"].includes(service.serviceType);
+  return {
+    id: service.id,
+    sourceId: service.id,
+    name: service.name,
+    serviceType: service.serviceType,
+    sellingMode: service.bookingMode || "configurable",
+    description: service.description,
+    pricingType: service.pricing.type,
+    amount: service.pricing.amount,
+    minimum: service.pricing.minimum || 0,
+    inclusions: service.inclusions.join("\n"),
+    customRequestsAllowed,
+    optionGroups: cloneOptionGroups(service.optionGroups?.length ? service.optionGroups : vendorOptionGroupsTemplate(service.serviceType, true)),
+    minGuests: service.minGuests,
+    maxGuests: service.maxGuests,
+    minLeadDays: service.minLeadDays,
+    venueIds: [...service.venueIds],
+    image: service.image || null
+  };
+}
+
+function blankOfferingDraft() {
+  return {
+    id: null,
+    sourceId: null,
+    name: "",
+    serviceType: "catering",
+    sellingMode: "hybrid",
+    description: "",
+    pricingType: "per_person",
+    amount: 15,
+    minimum: 300,
+    inclusions: "",
+    customRequestsAllowed: true,
+    optionGroups: vendorOptionGroupsTemplate("catering", true),
+    minGuests: 10,
+    maxGuests: 120,
+    minLeadDays: 7,
+    venueIds: spaces.map(space => space.id),
+    image: null
+  };
+}
+
+function ensureVendorOfferingEditor() {
+  if (vendorOfferingEditor.draft) return vendorOfferingEditor.draft;
+  const role = activeRole();
+  const service = vendorServices.find(item => item.id === vendorOfferingEditor.editingId && item.vendor === role?.organization);
+  vendorOfferingEditor.draft = service ? offeringDraftFromService(service) : blankOfferingDraft();
+  vendorOfferingEditor.status = service ? "published" : "draft";
+  vendorOfferingEditor.image = null;
+  vendorOfferingEditor.imageError = "";
+  return vendorOfferingEditor.draft;
+}
+
+function managedVendorOfferings() {
+  const organization = activeRole()?.organization;
+  return vendorServices.filter(service => service.vendor === organization);
+}
+
+function validateImageUpload(file) {
+  if (!file || file.size === 0) return "Choose a non-empty image file.";
+  if (!ACCEPTED_IMAGE_TYPES.has(file.type)) return "Use a JPG, PNG, or WebP image. GIF, SVG, PDF, and other files are not accepted.";
+  if (file.size > MAX_IMAGE_BYTES) return `Image must be ${MAX_IMAGE_LABEL} or smaller. This file is ${(file.size / 1024 / 1024).toFixed(2)} MB.`;
+  return "";
+}
+
+function captureVendorOfferingDraft(form) {
+  const data = new FormData(form);
+  const current = ensureVendorOfferingEditor();
+  const hasRenderedOptionGroups = Boolean(form.querySelector('[name^="groupEnabled:"]'));
+  const optionGroups = hasRenderedOptionGroups ? cloneOptionGroups(current.optionGroups).map(group => {
+    const groupKey = group.id;
+    const required = data.get(`groupRequired:${groupKey}`) === "yes";
+    const min = group.type === "multi" ? Math.max(0, Number(data.get(`groupMin:${groupKey}`) || 0)) : group.min;
+    const max = group.type === "multi" ? Math.max(min, Number(data.get(`groupMax:${groupKey}`) || Math.max(min, group.options?.length || 1))) : group.max;
+    return {
+      ...group,
+      label: String(data.get(`groupLabel:${groupKey}`) || group.label).trim(),
+      enabled: data.get(`groupEnabled:${groupKey}`) === "yes",
+      required,
+      ...(group.type === "multi" ? { min, max } : {}),
+      options: group.options?.map(choice => ({
+        ...choice,
+        label: String(data.get(`optionLabel:${groupKey}:${choice.id}`) || choice.label).trim(),
+        enabled: data.get(`optionEnabled:${groupKey}:${choice.id}`) === "yes",
+        price: choice.bookingMode === "quote" ? 0 : Math.max(0, Number(data.get(`optionPrice:${groupKey}:${choice.id}`) || 0)),
+        priceType: String(data.get(`optionPriceType:${groupKey}:${choice.id}`) || choice.priceType || "flat")
+      }))
+    };
+  }) : cloneOptionGroups(current.optionGroups);
+  vendorOfferingEditor.draft = {
+    ...current,
+    name: String(data.get("name") || "").trim(),
+    serviceType: String(data.get("serviceType") || "catering"),
+    sellingMode: String(data.get("sellingMode") || "fixed"),
+    description: String(data.get("description") || "").trim(),
+    pricingType: String(data.get("pricingType") || "flat"),
+    amount: Number(data.get("amount") || 0),
+    minimum: Number(data.get("minimum") || 0),
+    inclusions: String(data.get("inclusions") || "").trim(),
+    customRequestsAllowed: data.get("customRequestsAllowed") === "yes",
+    optionGroups,
+    minGuests: Number(data.get("minGuests") || 1),
+    maxGuests: Number(data.get("maxGuests") || 1),
+    minLeadDays: Number(data.get("minLeadDays") || 0),
+    venueIds: data.getAll("venueIds").map(String),
+    image: vendorOfferingEditor.image?.metadata || current.image || null
+  };
+  return vendorOfferingEditor.draft;
+}
+
+function offeringValidationErrors(draft) {
+  const errors = [];
+  if (!draft.name) errors.push("Add an offering title");
+  if (!draft.description) errors.push("Add a description");
+  if (!draft.inclusions.split("\n").some(line => line.trim())) errors.push("Add at least one included item");
+  if (!Number.isFinite(draft.amount) || draft.amount < 0) errors.push("Enter a valid base price");
+  if (!Number.isFinite(draft.minimum) || draft.minimum < 0) errors.push("Enter a valid minimum order");
+  if (!Number.isInteger(draft.minGuests) || !Number.isInteger(draft.maxGuests) || draft.minGuests < 1 || draft.maxGuests < draft.minGuests) errors.push("Maximum guests or units must be at least the minimum");
+  if (!draft.venueIds.length) errors.push("Select at least one venue served");
+  if (["configurable", "hybrid"].includes(draft.sellingMode)) {
+    const enabledGroups = draft.optionGroups.filter(group => group.enabled);
+    if (!enabledGroups.length) errors.push("Enable at least one organizer option group");
+    enabledGroups.forEach(group => {
+      if (!group.label) errors.push("Add a label for every enabled option group");
+      const enabledOptions = group.options?.filter(choice => choice.enabled) || [];
+      if (group.options && !enabledOptions.length) errors.push(`${group.label || "An option group"} needs at least one available choice`);
+      if (group.type === "multi" && group.required && group.min > enabledOptions.length) errors.push(`${group.label || "A multiple-choice group"} needs at least ${group.min} available choices`);
+    });
+  }
+  if (draft.sellingMode === "hybrid" && !draft.customRequestsAllowed) errors.push("Enable custom requests for the configurable + custom quote model");
+  return errors;
+}
+
+function publishedServiceFromDraft(draft) {
+  const existing = vendorServices.find(service => service.id === draft.sourceId && service.vendor === activeRole()?.organization);
+  const id = existing?.id || `vendor-${draft.serviceType}-${Date.now()}`;
+  const organization = activeRole().organization;
+  const invoicePrefix = organization.split(/\s+/).map(word => word[0]).join("").slice(0, 3).toUpperCase() || "VEN";
+  const common = {
+    id,
+    serviceType: draft.serviceType,
+    category: draft.serviceType === "cake" ? "Food & cake" : ["magic", "face-painting", "photo-booth"].includes(draft.serviceType) ? "Entertainment" : serviceCategoryLabels[draft.serviceType],
+    name: draft.name,
+    vendor: organization,
+    invoicePrefix,
+    pricing: { type: draft.pricingType, amount: draft.amount, ...(draft.minimum ? { minimum: draft.minimum } : {}) },
+    rating: existing?.rating || 0,
+    reviewCount: existing?.reviewCount || 0,
+    description: draft.description,
+    inclusions: draft.inclusions.split("\n").map(line => line.trim()).filter(Boolean),
+    active: true,
+    busy: existing?.busy || [],
+    venueIds: [...draft.venueIds],
+    minGuests: draft.minGuests,
+    maxGuests: draft.maxGuests,
+    minLeadDays: draft.minLeadDays,
+    bookingMode: draft.sellingMode,
+    customRequestsAllowed: draft.customRequestsAllowed,
+    optionGroups: cloneOptionGroups(draft.optionGroups),
+    catalogVersion: (existing?.catalogVersion || 0) + 1,
+    catalogPublishedAt: new Date().toISOString(),
+    image: draft.image ? { ...draft.image } : null,
+    imagePreviewUrl: vendorOfferingEditor.image?.previewUrl || (draft.image ? existing?.imagePreviewUrl || null : null),
+    taxProfile: existing?.taxProfile || { id: `TAX-${invoicePrefix}-CA`, label: `GST · ${organization} sample profile (5%)`, rate: 0.05 }
+  };
+  if (draft.serviceType === "catering") Object.assign(common, {
+    cuisines: existing?.cuisines || ["Canadian", "International"],
+    menuStyles: existing?.menuStyles || ["Classic comfort", "Vegetarian-forward"],
+    dietary: existing?.dietary || ["Vegetarian", "Vegan", "Gluten-aware"],
+    allergyReview: existing?.allergyReview || ["nut", "gluten", "dairy"],
+    servingStyles: existing?.servingStyles || ["Buffet", "Drop-off"],
+    allergenNote: existing?.allergenNote || "Allergy requests require written vendor confirmation; shared-kitchen cross-contact may remain possible.",
+    deliveryWindow: existing?.deliveryWindow || "60–90 minutes before service"
+  });
+  return common;
+}
+
+function vendorOfferingImageMarkup(draft) {
+  const image = vendorOfferingEditor.image;
+  const metadata = image?.metadata || draft.image;
+  return `<section class="offering-upload" aria-labelledby="offering-image-title"><div><span class="vendor-category">Offering media</span><h3 id="offering-image-title">Cover image</h3><p>One JPG, PNG, or WebP image up to ${MAX_IMAGE_LABEL}. A clear landscape image helps organizers understand the package.</p></div>${image?.previewUrl ? `<div class="upload-preview offering-image-preview"><img src="${image.previewUrl}" alt="Offering cover preview"><div><strong>${escapeHtml(metadata.name)}</strong><span>${(metadata.size / 1024 / 1024).toFixed(2)} MB · ${escapeHtml(metadata.type)}</span><span class="upload-actions"><label class="text-button" for="offering-cover-image">Replace</label><button class="text-button" type="button" id="remove-offering-image">Remove image</button></span></div></div>` : metadata ? `<div class="stored-image-note"><strong>Saved image metadata</strong><span>${escapeHtml(metadata.name)} · ${(metadata.size / 1024 / 1024).toFixed(2)} MB</span><label class="text-button" for="offering-cover-image">Choose replacement</label></div>` : `<label class="upload-drop offering-drop" for="offering-cover-image"><strong>Choose cover image</strong><span>JPG, PNG, or WebP · maximum ${MAX_IMAGE_LABEL}</span></label>`}<input class="visually-hidden" id="offering-cover-image" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="offering-upload-help offering-upload-error"><small id="offering-upload-help">Prototype: previewed locally only. Production repeats MIME validation, scanning, metadata removal, and safe re-encoding on the server.</small><div class="upload-error" id="offering-upload-error" tabindex="-1" role="alert" ${vendorOfferingEditor.imageError ? "" : "hidden"}>${escapeHtml(vendorOfferingEditor.imageError)}</div></section>`;
+}
+
+function vendorOptionGroupEditor(draft) {
+  if (draft.sellingMode === "fixed") return `<section class="builder-option-editor"><div class="builder-section-head"><div><span class="vendor-category">Organizer configuration</span><h3>Pre-made package</h3><p>The organizer receives the published scope at one price; no choices are required.</p></div><span class="mini-status">No option groups</span></div></section>`;
+  if (draft.sellingMode === "quote") return `<section class="builder-option-editor"><div class="builder-section-head"><div><span class="vendor-category">Organizer configuration</span><h3>Custom quote brief</h3><p>The organizer describes the requested scope. Payment stays blocked until the vendor returns an itemized quote.</p></div><span class="mini-status pending">Quote required</span></div></section>`;
+  const priceTypeLabels = { flat: "per booking", per_person: "per guest", hourly: "per hour", per_unit: "per unit" };
+  const groups = cloneOptionGroups(draft.optionGroups);
+  const cards = groups.map(group => {
+    const visibleChoices = group.options?.filter(choice => choice.bookingMode !== "quote" || draft.sellingMode === "hybrid");
+    const options = visibleChoices?.map(choice => `<div class="builder-option-row"><label class="builder-available"><input type="checkbox" name="optionEnabled:${group.id}:${choice.id}" value="yes" ${choice.enabled !== false ? "checked" : ""}> <span>Available</span></label><label><span>Choice shown to organizer</span><input name="optionLabel:${group.id}:${choice.id}" value="${escapeHtml(choice.label)}" required></label>${choice.bookingMode === "quote" ? `<div class="builder-quote-choice"><strong>Custom quote</strong><small>${choice.requiresImage ? "Private reference image required" : "Vendor prices after review"}</small></div>` : `<label><span>Price adjustment</span><input name="optionPrice:${group.id}:${choice.id}" type="number" min="0" step="0.01" value="${Number(choice.price || 0)}"></label><label><span>Adjustment basis</span><select name="optionPriceType:${group.id}:${choice.id}">${Object.entries(priceTypeLabels).map(([value, label]) => `<option value="${value}" ${choice.priceType === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>`}</div>`).join("") || `<p class="builder-entry-note">The organizer enters ${group.type === "time" ? "a preferred time" : group.type === "textarea" ? "details in a larger text field" : "text"}. This field has no automatic price adjustment.</p>`;
+    const multiRules = group.type === "multi" ? `<label><span>Minimum choices</span><input name="groupMin:${group.id}" type="number" min="0" max="${group.options?.length || 0}" value="${Number(group.min || 0)}"></label><label><span>Maximum choices</span><input name="groupMax:${group.id}" type="number" min="1" max="${group.options?.length || 1}" value="${Number(group.max || group.options?.length || 1)}"></label>` : "";
+    const typeLabel = group.type === "single" ? "Choose one" : group.type === "multi" ? "Choose several" : group.type === "time" ? "Time" : group.type === "textarea" ? "Long answer" : "Short answer";
+    return `<article class="builder-option-group ${group.enabled === false ? "disabled" : ""}"><div class="builder-option-title"><label><input type="checkbox" name="groupEnabled:${group.id}" value="yes" ${group.enabled !== false ? "checked" : ""}> <span><strong>${escapeHtml(group.label)}</strong><small>${typeLabel}</small></span></label><code>${escapeHtml(group.id)}</code></div><div class="builder-group-settings"><label><span>Organizer-facing group label</span><input name="groupLabel:${group.id}" value="${escapeHtml(group.label)}" required></label><label class="builder-required"><input type="checkbox" name="groupRequired:${group.id}" value="yes" ${group.required ? "checked" : ""}> <span>Required before checkout</span></label>${multiRules}</div><div class="builder-option-rows">${options}</div></article>`;
+  }).join("");
+  return `<section class="builder-option-editor" aria-labelledby="option-editor-title"><div class="builder-section-head"><div><span class="vendor-category">Organizer configuration</span><h3 id="option-editor-title">Published choices and price adjustments</h3><p>Enable only the groups this package supports. Rename choices and set each automatic price adjustment; the organizer sees this exact structure after selecting the package.</p></div><span class="mini-status">${groups.filter(group => group.enabled !== false).length} enabled</span></div><div class="builder-option-groups">${cards}</div></section>`;
+}
+
+function cataloguePriceLabel(pricing) {
+  const suffix = pricing.type === "per_person" ? " / guest" : pricing.type === "hourly" ? " / hour" : pricing.type === "per_unit" ? " / unit" : "";
+  const minimum = pricing.minimum ? ` · ${money(pricing.minimum)} minimum` : "";
+  return `${money(pricing.amount)}${suffix}${minimum}`;
+}
+
+function vendorOfferingsPage() {
+  const role = activeRole();
+  const draft = ensureVendorOfferingEditor();
+  const published = managedVendorOfferings();
+  const categoryChoices = offeringChoiceTemplates[draft.serviceType] || [];
+  const catalogueCards = [...published.map(service => ({ id: service.id, name: service.name, serviceType: service.serviceType, priceLabel: cataloguePriceLabel(service.pricing), status: "Published", mode: service.bookingMode || "configurable" })), ...vendorOfferingDrafts.filter(item => !published.some(service => service.id === item.id)).map(item => ({ id: item.id, name: item.name || "Untitled offering", serviceType: item.serviceType, priceLabel: cataloguePriceLabel({ type: item.pricingType, amount: Number(item.amount || 0), minimum: Number(item.minimum || 0) }), status: "Draft", mode: item.sellingMode }))];
+  const catalog = catalogueCards.map(item => `<button type="button" class="managed-offering-card ${vendorOfferingEditor.editingId === item.id ? "selected" : ""}" data-edit-offering="${item.id}"><span><span class="vendor-category">${serviceCategoryLabels[item.serviceType] || item.serviceType}</span><strong>${escapeHtml(item.name)}</strong><small>${item.mode === "fixed" ? "Pre-made package" : item.mode === "quote" ? "Custom quote" : item.mode === "hybrid" ? "Configurable + custom quote" : "Configurable package"}</small></span><span><b>${item.priceLabel}</b><em>${item.status}</em></span></button>`).join("");
+  const pricingUnit = draft.pricingType === "per_person" ? "per guest" : draft.pricingType === "hourly" ? "per hour" : draft.pricingType === "per_unit" ? "per unit" : "package";
+  const content = `<header class="dash-head"><div><span class="eyebrow">Independent vendor portal · Offering catalogue</span><h1>Packages, choices, and pricing</h1><p>Publish pre-made packages, configurable offerings, or custom-quote services. Organizers see only published versions.</p></div><button class="button button-dark" type="button" id="new-vendor-offering">+ New offering</button></header>${roleContextNotice()}<div class="metric-grid"><div class="metric"><span>Published</span><strong>${published.length}</strong><em>Live in marketplace</em></div><div class="metric"><span>Drafts</span><strong>${vendorOfferingDrafts.length}</strong><em>Private to vendor admins</em></div><div class="metric"><span>Image limit</span><strong>5 MB</strong><em>JPG, PNG, WebP</em></div><div class="metric"><span>Custom requests</span><strong>${published.filter(item => item.customRequestsAllowed).length}</strong><em>Quote-controlled</em></div></div><div class="offering-workspace"><aside class="dash-card offering-catalog"><div class="card-heading-row"><div><h2>Your offerings</h2><p>Published items can be selected by organizers. Drafts remain private.</p></div></div><div class="managed-offering-list">${catalog || '<p class="empty-guidance">No offerings yet.</p>'}</div><div class="policy-callout"><strong>Versioned publishing</strong><span>Confirmed orders keep their accepted package, options, prices, terms, and image reference even after you publish a later version.</span></div></aside><section class="dash-card offering-builder"><div class="builder-title"><div><span class="vendor-category">${draft.id ? "Edit offering" : "New offering"}</span><h2>${draft.id ? escapeHtml(draft.name || "Untitled offering") : "Create an offering"}</h2><p>${vendorOfferingEditor.status === "published" ? "Editing a published package creates the next catalogue version when published." : "This draft is not visible to organizers."}</p></div><span class="status-pill ${vendorOfferingEditor.status === "published" ? "confirmed" : ""}">${vendorOfferingEditor.status === "published" ? "Published" : "Draft"}</span></div><form id="vendor-offering-form"><div class="offering-form-grid"><label class="config-field"><span>Offering title *</span><input name="name" value="${escapeHtml(draft.name)}" placeholder="Example: Family celebration buffet" required></label><label class="config-field"><span>Service category *</span><select name="serviceType" id="offering-service-type">${Object.entries(serviceCategoryLabels).map(([id, label]) => `<option value="${id}" ${draft.serviceType === id ? "selected" : ""}>${label}</option>`).join("")}</select></label><label class="config-field config-field-wide"><span>Description *</span><textarea name="description" rows="3" placeholder="Describe the package scope, style, and ideal event" required>${escapeHtml(draft.description)}</textarea></label><label class="config-field"><span>Selling model *</span><select name="sellingMode" id="offering-selling-mode"><option value="fixed" ${draft.sellingMode === "fixed" ? "selected" : ""}>Pre-made fixed package</option><option value="configurable" ${draft.sellingMode === "configurable" ? "selected" : ""}>Configurable package</option><option value="hybrid" ${draft.sellingMode === "hybrid" ? "selected" : ""}>Configurable + custom quote</option><option value="quote" ${draft.sellingMode === "quote" ? "selected" : ""}>Custom quote only</option></select></label><label class="config-field"><span>Pricing method *</span><select name="pricingType" id="offering-pricing-type"><option value="flat" ${draft.pricingType === "flat" ? "selected" : ""}>Flat package</option><option value="per_person" ${draft.pricingType === "per_person" ? "selected" : ""}>Per guest</option><option value="hourly" ${draft.pricingType === "hourly" ? "selected" : ""}>Per hour</option><option value="per_unit" ${draft.pricingType === "per_unit" ? "selected" : ""}>Per unit</option></select></label><label class="config-field"><span>Base price (${pricingUnit}) *</span><input name="amount" type="number" min="0" step="0.01" value="${draft.amount}" required></label><label class="config-field"><span>Minimum order</span><input name="minimum" type="number" min="0" step="0.01" value="${draft.minimum}"></label><label class="config-field config-field-wide"><span>What the package includes *</span><textarea name="inclusions" rows="5" placeholder="One included item per line" required>${escapeHtml(draft.inclusions)}</textarea></label></div><fieldset class="builder-choice-fieldset"><legend>Category capability checklist</legend><p>Use these prompts while designing the package. Configure the organizer-facing fields and price adjustments in the structured editor below.</p><div class="builder-choice-grid builder-capability-tags">${categoryChoices.map(label => `<span>${escapeHtml(label)}</span>`).join("")}</div><label class="custom-request-toggle"><input type="checkbox" name="customRequestsAllowed" value="yes" ${draft.customRequestsAllowed ? "checked" : ""} ${draft.sellingMode === "hybrid" ? "" : "disabled"}> <span><strong>Accept custom requests and private reference images</strong><small>${draft.sellingMode === "hybrid" ? "Custom work changes the organizer flow to Quote required; upload alone never confirms the request." : "Choose Configurable + custom quote to enable this path."}</small></span></label></fieldset>${vendorOptionGroupEditor(draft)}${vendorOfferingImageMarkup(draft)}<fieldset class="builder-choice-fieldset"><legend>Availability and booking rules</legend><div class="offering-form-grid"><label class="config-field"><span>Minimum guests / units *</span><input name="minGuests" type="number" min="1" value="${draft.minGuests}" required></label><label class="config-field"><span>Maximum guests / units *</span><input name="maxGuests" type="number" min="1" value="${draft.maxGuests}" required></label><label class="config-field"><span>Minimum lead time (days) *</span><input name="minLeadDays" type="number" min="0" value="${draft.minLeadDays}" required></label><div class="config-field config-field-wide"><span>Venues served *</span><div class="builder-choice-grid">${spaces.map(space => `<label><input type="checkbox" name="venueIds" value="${space.id}" ${draft.venueIds.includes(space.id) ? "checked" : ""}> <span>${space.name}</span></label>`).join("")}</div></div></div></fieldset><div class="offering-publish-check"><strong>Before publishing</strong><span>Verify scope, option prices, service area, taxes, capacity, lead time, cancellation terms, and image rights. Production publishing creates a new immutable catalogue version.</span></div><div class="booking-actions"><button class="button button-light" type="submit" value="draft" name="offeringAction">Save draft</button><button class="button button-green" type="submit" value="publish" name="offeringAction">Publish offering</button></div>${vendorOfferingEditor.savedAt ? `<p class="saved-at" role="status">Last saved in this prototype at ${vendorOfferingEditor.savedAt}.</p>` : ""}</form></section></div>`;
+  return dashboardShell("vendor-offerings", content);
+}
+
 function vendorDashboardPage() {
   const role = activeRole();
   const financeAccess = hasPermission("vendor.finance") || hasPermission("vendor.documents");
@@ -1766,7 +2306,7 @@ function vendorDashboardPage() {
   const featuredReviews = vendorReviewSummary(featuredService);
   const latestReview = publicReviewsFor("vendor-service", featuredService.id)[0];
   const financePanel = financeAccess ? `<h3>Completed-order documents</h3><button class="document-link" type="button" data-route="vendor-invoice"><span><strong>${financeDemo.vendorInvoice}</strong><small>Vendor supplier invoice and payment allocation</small></span><b>→</b></button><button class="document-link" type="button" data-route="vendor-payout"><span><strong>PST-WSE-1033</strong><small>Payout statement + Gather fee invoice</small></span><b>→</b></button>` : `<span class="read-only-label">Fulfilment access</span><h3>Financial details are restricted</h3><p>This role can complete assigned orders but cannot see commission invoices, calculated payouts, bank destinations, or vendor tax details.</p><div class="policy-callout"><strong>Why?</strong><span>Operational staff receive only the information needed to deliver the service.</span></div>`;
-  const content = `<header class="dash-head"><div><span class="eyebrow">Independent vendor portal · ${role.shortRole}</span><h1>Good morning, ${role.name.split(" ")[0]}.</h1><p>${role.organization} · entertainment services</p></div><div class="avatar">${role.initials}</div></header>${roleContextNotice()}<div class="metric-grid"><div class="metric"><span>Upcoming orders</span><strong>4</strong><em>Next 30 days</em></div><div class="metric"><span>Fulfilment due</span><strong>1</strong><em>Confirm after service</em></div><div class="metric"><span>${financeAccess ? "Calculated payout" : "Orders this month"}</span><strong>${financeAccess ? money(financeDemo.vendor.net) : "6"}</strong><em>${financeAccess ? "Transfer not simulated" : "Assigned to team"}</em></div><div class="metric"><span>Verified rating</span><strong>${featuredReviews.rating?.toFixed(1) || "New"}</strong><em>${featuredReviews.count} completed order${featuredReviews.count === 1 ? "" : "s"}</em></div></div><div class="settlement-layout"><section class="dash-card"><div class="card-heading-row"><div><h3>Service orders</h3><p>Vendor fulfilment is tracked separately from venue closeout.</p></div></div><div class="vendor-order"><div><span class="supplier-mark vendor">W</span><div><strong>Family magic show</strong><small>${financeDemo.bookingId} · ${financeDemo.eventDate} · Ridgeview Community Hall</small></div></div><span class="mini-status">Fulfilled</span></div><div class="vendor-order"><div><span class="supplier-mark vendor">W</span><div><strong>Family magic show</strong><small>BKG-1048 · October 17, 2026 · booking confirmed</small></div></div>${fulfilmentAccess ? '<button class="compact-button" data-task="Fulfilment checklist opened">Open checklist</button>' : '<span class="mini-status pending">Upcoming</span>'}</div><div class="policy-callout"><strong>Independent settlement</strong><span>The completed order can become payout-ready even if the venue’s separate security-deposit case is still open. Approval and transfer keep their own statuses.</span></div>${latestReview ? `<div class="vendor-review-preview"><div><strong>Latest verified organizer review</strong><span>Public feedback is read-only here; suppliers do not approve or remove reviews.</span></div>${publicReviewCard(latestReview, true)}</div>` : ""}</section><aside class="dash-card">${financePanel}<button class="button button-light button-wide" type="button" data-route="sign-in">Compare another demo role</button></aside></div>`;
+  const content = `<header class="dash-head"><div><span class="eyebrow">Independent vendor portal · ${role.shortRole}</span><h1>Good morning, ${role.name.split(" ")[0]}.</h1><p>${role.organization} · entertainment services</p></div>${hasPermission("vendor.settings") ? '<button class="button button-dark" type="button" data-route="vendor-offerings">Manage offerings</button>' : `<div class="avatar">${role.initials}</div>`}</header>${roleContextNotice()}<div class="metric-grid"><div class="metric"><span>Upcoming orders</span><strong>4</strong><em>Next 30 days</em></div><div class="metric"><span>Fulfilment due</span><strong>1</strong><em>Confirm after service</em></div><div class="metric"><span>${financeAccess ? "Calculated payout" : "Orders this month"}</span><strong>${financeAccess ? money(financeDemo.vendor.net) : "6"}</strong><em>${financeAccess ? "Transfer not simulated" : "Assigned to team"}</em></div><div class="metric"><span>Verified rating</span><strong>${featuredReviews.rating?.toFixed(1) || "New"}</strong><em>${featuredReviews.count} completed order${featuredReviews.count === 1 ? "" : "s"}</em></div></div><div class="settlement-layout"><section class="dash-card"><div class="card-heading-row"><div><h3>Service orders</h3><p>Vendor fulfilment is tracked separately from venue closeout.</p></div></div><div class="vendor-order"><div><span class="supplier-mark vendor">W</span><div><strong>Family magic show</strong><small>${financeDemo.bookingId} · ${financeDemo.eventDate} · Ridgeview Community Hall</small></div></div><span class="mini-status">Fulfilled</span></div><div class="vendor-order"><div><span class="supplier-mark vendor">W</span><div><strong>Family magic show</strong><small>BKG-1048 · October 17, 2026 · booking confirmed</small></div></div>${fulfilmentAccess ? '<button class="compact-button" data-task="Fulfilment checklist opened">Open checklist</button>' : '<span class="mini-status pending">Upcoming</span>'}</div><div class="policy-callout"><strong>Independent settlement</strong><span>The completed order can become payout-ready even if the venue’s separate security-deposit case is still open. Approval and transfer keep their own statuses.</span></div>${latestReview ? `<div class="vendor-review-preview"><div><strong>Latest verified organizer review</strong><span>Public feedback is read-only here; suppliers do not approve or remove reviews.</span></div>${publicReviewCard(latestReview, true)}</div>` : ""}</section><aside class="dash-card">${hasPermission("vendor.settings") ? '<h3>Offering catalogue</h3><p>Create fixed packages, configurable choices, custom-quote services, prices, availability, and validated images.</p><button class="button button-green button-wide" type="button" data-route="vendor-offerings">Open offerings</button>' : ""}${financePanel}<button class="button button-light button-wide" type="button" data-route="sign-in">Compare another demo role</button></aside></div>`;
   return dashboardShell("vendor-dashboard", content);
 }
 
@@ -1869,6 +2409,7 @@ function render(route = location.hash.slice(1) || "home") {
     "vendor-payout": vendorPayoutPage,
     "fee-settings": feeSettingsPage,
     "vendor-dashboard": vendorDashboardPage,
+    "vendor-offerings": vendorOfferingsPage,
     "customer-dashboard": customerDashboardPage,
     "customer-event": customerEventPage,
     "customer-reviews": customerReviewsPage,
@@ -1898,6 +2439,7 @@ function render(route = location.hash.slice(1) || "home") {
     "vendor-payout": "Vendor payout statement",
     "fee-settings": "Commercial terms",
     "vendor-dashboard": "Vendor portal demo",
+    "vendor-offerings": "Vendor offerings",
     "customer-dashboard": "My bookings",
     "customer-event": "My Event",
     "customer-reviews": "Review your event",
@@ -1949,6 +2491,115 @@ function bindPageEvents() {
   app.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => navigate(el.dataset.route)));
   app.querySelectorAll("[data-demo-role]").forEach(button => button.addEventListener("click", () => setActiveRole(button.dataset.demoRole)));
   app.querySelectorAll("[data-sign-out]").forEach(button => button.addEventListener("click", signOut));
+  const revokePreview = preview => {
+    if (!preview?.previewUrl?.startsWith("blob:")) return;
+    if (vendorServices.some(service => service.imagePreviewUrl === preview.previewUrl)) return;
+    URL.revokeObjectURL(preview.previewUrl);
+  };
+  app.querySelector("#new-vendor-offering")?.addEventListener("click", () => {
+    revokePreview(vendorOfferingEditor.image);
+    vendorOfferingEditor = { editingId: null, status: "draft", image: null, imageError: "", savedAt: null, draft: blankOfferingDraft() };
+    render("vendor-offerings");
+    requestAnimationFrame(() => app.querySelector('[name="name"]')?.focus({ preventScroll: true }));
+  });
+  app.querySelectorAll("[data-edit-offering]").forEach(button => button.addEventListener("click", () => {
+    const id = button.dataset.editOffering;
+    const published = managedVendorOfferings().find(service => service.id === id);
+    const savedDraft = vendorOfferingDrafts.find(item => item.id === id);
+    if (!published && !savedDraft) return;
+    revokePreview(vendorOfferingEditor.image);
+    vendorOfferingEditor = {
+      editingId: id,
+      status: published ? "published" : "draft",
+      image: published?.imagePreviewUrl ? { file: null, metadata: published.image, previewUrl: published.imagePreviewUrl } : null,
+      imageError: "",
+      savedAt: null,
+      draft: published ? offeringDraftFromService(published) : JSON.parse(JSON.stringify(savedDraft))
+    };
+    render("vendor-offerings");
+  }));
+  const offeringForm = app.querySelector("#vendor-offering-form");
+  app.querySelector("#offering-service-type")?.addEventListener("change", event => {
+    const draft = captureVendorOfferingDraft(offeringForm);
+    draft.serviceType = event.currentTarget.value;
+    draft.customRequestsAllowed = ["catering", "cake", "decor", "photo-booth"].includes(draft.serviceType);
+    draft.optionGroups = vendorOptionGroupsTemplate(draft.serviceType, true);
+    render("vendor-offerings");
+  });
+  app.querySelector("#offering-selling-mode")?.addEventListener("change", () => {
+    captureVendorOfferingDraft(offeringForm);
+    render("vendor-offerings");
+  });
+  app.querySelector("#offering-pricing-type")?.addEventListener("change", () => {
+    captureVendorOfferingDraft(offeringForm);
+    render("vendor-offerings");
+  });
+  app.querySelector("#offering-cover-image")?.addEventListener("change", event => {
+    captureVendorOfferingDraft(offeringForm);
+    const file = event.currentTarget.files?.[0];
+    const error = validateImageUpload(file);
+    if (error) {
+      vendorOfferingEditor.imageError = error;
+      event.currentTarget.value = "";
+      render("vendor-offerings");
+      requestAnimationFrame(() => app.querySelector("#offering-upload-error")?.focus({ preventScroll: true }));
+      return;
+    }
+    revokePreview(vendorOfferingEditor.image);
+    const metadata = { name: file.name, type: file.type, size: file.size, lastModified: file.lastModified };
+    vendorOfferingEditor.image = { file, metadata, previewUrl: URL.createObjectURL(file) };
+    vendorOfferingEditor.draft.image = metadata;
+    vendorOfferingEditor.imageError = "";
+    render("vendor-offerings");
+    showToast("Image accepted for local preview. Nothing was uploaded to a server.");
+  });
+  app.querySelector("#remove-offering-image")?.addEventListener("click", () => {
+    captureVendorOfferingDraft(offeringForm);
+    revokePreview(vendorOfferingEditor.image);
+    vendorOfferingEditor.image = null;
+    vendorOfferingEditor.draft.image = null;
+    vendorOfferingEditor.imageError = "";
+    render("vendor-offerings");
+    showToast("Offering image removed from this draft.");
+  });
+  offeringForm?.addEventListener("submit", event => {
+    event.preventDefault();
+    if (!hasPermission("vendor.settings")) { showToast("Only a vendor administrator can change offerings."); return; }
+    const draft = captureVendorOfferingDraft(event.currentTarget);
+    const errors = offeringValidationErrors(draft);
+    if (errors.length) { showToast(errors.join(". ")); return; }
+    const action = event.submitter?.value || "draft";
+    if (action === "draft") {
+      const draftId = draft.id?.startsWith("draft-") ? draft.id : `draft-${Date.now()}`;
+      const record = { ...JSON.parse(JSON.stringify(draft)), id: draftId, sourceId: draft.sourceId || (draft.id && !draft.id.startsWith("draft-") ? draft.id : null) };
+      const existingIndex = vendorOfferingDrafts.findIndex(item => item.id === draftId);
+      if (existingIndex >= 0) vendorOfferingDrafts.splice(existingIndex, 1, record);
+      else vendorOfferingDrafts.push(record);
+      vendorOfferingEditor.draft = { ...record };
+      vendorOfferingEditor.editingId = draftId;
+      vendorOfferingEditor.status = "draft";
+      vendorOfferingEditor.savedAt = new Date().toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" });
+      render("vendor-offerings");
+      showToast("Draft saved locally. It is not visible to organizers.");
+      return;
+    }
+    const service = publishedServiceFromDraft(draft);
+    const existingIndex = vendorServices.findIndex(item => item.id === service.id && item.vendor === activeRole().organization);
+    const previousPreviewUrl = existingIndex >= 0 ? vendorServices[existingIndex].imagePreviewUrl : null;
+    if (existingIndex >= 0) vendorServices.splice(existingIndex, 1, service);
+    else vendorServices.push(service);
+    if (previousPreviewUrl?.startsWith("blob:") && previousPreviewUrl !== service.imagePreviewUrl) URL.revokeObjectURL(previousPreviewUrl);
+    vendorOfferingDrafts = vendorOfferingDrafts.filter(item => item.id !== draft.id && item.sourceId !== service.id);
+    delete bookingData.vendorConfigurations[service.id];
+    vendorOfferingEditor.editingId = service.id;
+    vendorOfferingEditor.draft = offeringDraftFromService(service);
+    vendorOfferingEditor.image = service.imagePreviewUrl ? { file: vendorOfferingEditor.image?.file || null, metadata: service.image, previewUrl: service.imagePreviewUrl } : null;
+    vendorOfferingEditor.status = "published";
+    vendorOfferingEditor.imageError = "";
+    vendorOfferingEditor.savedAt = new Date().toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" });
+    render("vendor-offerings");
+    showToast("Offering published. Organizers can now find this package when it matches their booking.");
+  });
   const focusEventSection = (sectionId, selector = "h2") => requestAnimationFrame(() => {
     const section = app.querySelector(`#${CSS.escape(sectionId)}`);
     const target = section?.querySelector(selector) || section;
@@ -2311,6 +2962,91 @@ function bindPageEvents() {
       replacement?.focus({ preventScroll: true });
     });
   }));
+  app.querySelectorAll("[data-config-service][data-config-group]").forEach(input => input.addEventListener("change", event => {
+    const control = event.currentTarget;
+    const service = vendorServices.find(item => item.id === control.dataset.configService);
+    if (!service) return;
+    const configuration = configurationFor(service);
+    const groupId = control.dataset.configGroup;
+    const group = configurationSchemaFor(service).find(item => item.id === groupId);
+    if (!group) return;
+    const previousScroll = window.scrollY;
+    if (control.type === "checkbox") {
+      const selector = `[data-config-service="${CSS.escape(service.id)}"][data-config-group="${CSS.escape(groupId)}"]:checked`;
+      const checked = [...app.querySelectorAll(selector)];
+      if (group.max && checked.length > group.max) {
+        control.checked = false;
+        showToast(`Choose no more than ${group.max} for ${group.label.toLowerCase()}.`);
+        return;
+      }
+      configuration.selections[groupId] = checked.map(item => item.value);
+    } else configuration.selections[groupId] = control.value;
+    configuration.quote = { status: "none", amount: 0, reference: "" };
+    const updatedStatus = configurationStatus(service);
+    if (!updatedStatus.referenceRequired && configuration.referenceImage) {
+      revokePreview(organizerReferenceFiles[service.id]);
+      delete organizerReferenceFiles[service.id];
+      configuration.referenceImage = null;
+      configuration.imageError = "";
+    }
+    const focus = { groupId, value: control.value, type: control.type };
+    render("booking");
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: previousScroll });
+      const candidates = [...app.querySelectorAll(`[data-config-service="${CSS.escape(service.id)}"][data-config-group="${CSS.escape(focus.groupId)}"]`)];
+      const replacement = ["radio", "checkbox"].includes(focus.type) ? candidates.find(item => item.value === focus.value) : candidates[0];
+      replacement?.focus({ preventScroll: true });
+    });
+  }));
+  app.querySelectorAll(".organizer-reference-input").forEach(input => input.addEventListener("change", event => {
+    const service = vendorServices.find(item => item.id === event.currentTarget.dataset.referenceService);
+    if (!service) return;
+    const configuration = configurationFor(service);
+    const file = event.currentTarget.files?.[0];
+    const error = validateImageUpload(file);
+    if (error) {
+      configuration.imageError = error;
+      event.currentTarget.value = "";
+      render("booking");
+      showToast(error);
+      return;
+    }
+    revokePreview(organizerReferenceFiles[service.id]);
+    const metadata = { name: file.name, type: file.type, size: file.size, lastModified: file.lastModified };
+    organizerReferenceFiles[service.id] = { file, previewUrl: URL.createObjectURL(file) };
+    configuration.referenceImage = metadata;
+    configuration.imageError = "";
+    configuration.quote = { status: "none", amount: 0, reference: "" };
+    render("booking");
+    showToast("Reference image accepted. It remains private and still requires vendor review.");
+  }));
+  app.querySelectorAll("[data-remove-reference]").forEach(button => button.addEventListener("click", () => {
+    const service = vendorServices.find(item => item.id === button.dataset.removeReference);
+    if (!service) return;
+    const configuration = configurationFor(service);
+    revokePreview(organizerReferenceFiles[service.id]);
+    delete organizerReferenceFiles[service.id];
+    configuration.referenceImage = null;
+    configuration.imageError = "";
+    configuration.quote = { status: "none", amount: 0, reference: "" };
+    render("booking");
+    showToast("Custom-design reference removed.");
+  }));
+  app.querySelectorAll("[data-request-quote]").forEach(button => button.addEventListener("click", () => {
+    const service = vendorServices.find(item => item.id === button.dataset.requestQuote);
+    if (!service || !configurationStatus(service).complete) { showToast("Complete the required custom-service details first."); return; }
+    configurationFor(service).quote = { status: "requested", amount: 0, reference: "" };
+    render("booking");
+    showToast(`Quote request sent to ${service.vendor}. Payment remains blocked.`);
+  }));
+  app.querySelectorAll("[data-simulate-quote]").forEach(button => button.addEventListener("click", () => {
+    const service = vendorServices.find(item => item.id === button.dataset.simulateQuote);
+    if (!service || configurationFor(service).quote?.status !== "requested") return;
+    const quoteAmounts = { catering: 150, cake: 65, decor: 120, "photo-booth": 55, magic: 90, "face-painting": 60 };
+    configurationFor(service).quote = { status: "quoted", amount: quoteAmounts[service.serviceType] || 75, reference: `QTE-${service.invoicePrefix}-${bookingSequence}` };
+    render("booking");
+    showToast("Prototype vendor quote accepted for the exact saved configuration.");
+  }));
   app.querySelectorAll(".addon-checkbox").forEach(input => input.addEventListener("change", event => {
     const previousScroll = window.scrollY;
     const changedAddon = event.currentTarget.value;
@@ -2392,7 +3128,9 @@ function bindPageEvents() {
     if (fit.status !== "allowed") { showToast(`${fit.label}. Change the purpose or event answers before payment.`); return; }
     ensureRequiredAddons();
     const vendorStatus = selectedVendorAvailability();
-    if (!vendorStatus.available) { showToast(`${vendorStatus.unavailable.map(item => item.name).join(", ")} no longer matches this booking. Choose an available package.`); return; }
+    if (vendorStatus.unavailable.length) { showToast(`${vendorStatus.unavailable.map(item => item.name).join(", ")} no longer matches this booking. Choose an available package.`); return; }
+    if (vendorStatus.incompleteConfigurations.length) { showToast(`Complete the required choices for ${vendorStatus.incompleteConfigurations.map(item => item.name).join(", ")}.`); return; }
+    if (vendorStatus.pendingQuotes.length) { showToast(`An accepted vendor quote is required for ${vendorStatus.pendingQuotes.map(item => item.name).join(", ")} before payment.`); return; }
     if (!vendorStatus.ready) { render("booking"); showToast("Written vendor confirmation is required for the selected allergy requirements before payment."); return; }
     bookingStep = 3;
     render("booking");
@@ -2405,7 +3143,7 @@ function bindPageEvents() {
     } else bookingStep = Math.max(1, bookingStep - 1);
     render("booking");
   });
-  app.querySelector("#confirm-booking")?.addEventListener("click", () => { if (!app.querySelector("#agree").checked) { showToast("Please accept the applicable booking policies to continue."); return; } const fit = eventCompatibility(); if (fit.status !== "allowed") { showToast(`${fit.label}. The venue must approve this use before payment.`); bookingStep = 2; addonStage = "fit"; render("booking"); return; } ensureRequiredAddons(); if (!availability().available) { showToast("That venue time is no longer available. Please choose another time."); navigate("venue"); return; } const vendorStatus = selectedVendorAvailability(); if (!vendorStatus.ready) { showToast(vendorStatus.pendingConfirmations.length ? "Vendor allergy confirmation is required before payment." : `${vendorStatus.unavailable.map(item => item.name).join(", ")} is no longer available. Please update vendor services.`); bookingStep = 2; addonStage = "services"; activeServiceType = null; render("booking"); return; } confirmedBookingSnapshot = createBookingSnapshot(); resetEventWorkspaceState(); bookingSequence += 1; bookingStep = 4; render("booking"); });
+  app.querySelector("#confirm-booking")?.addEventListener("click", () => { if (!app.querySelector("#agree").checked) { showToast("Please accept the applicable booking policies to continue."); return; } const fit = eventCompatibility(); if (fit.status !== "allowed") { showToast(`${fit.label}. The venue must approve this use before payment.`); bookingStep = 2; addonStage = "fit"; render("booking"); return; } ensureRequiredAddons(); if (!availability().available) { showToast("That venue time is no longer available. Please choose another time."); navigate("venue"); return; } const vendorStatus = selectedVendorAvailability(); if (!vendorStatus.ready) { const message = vendorStatus.pendingQuotes.length ? "An accepted vendor quote is required before payment." : vendorStatus.incompleteConfigurations.length ? "Complete every required package choice before payment." : vendorStatus.pendingConfirmations.length ? "Vendor allergy confirmation is required before payment." : `${vendorStatus.unavailable.map(item => item.name).join(", ")} is no longer available. Please update vendor services.`; showToast(message); bookingStep = 2; addonStage = "services"; activeServiceType = null; render("booking"); return; } confirmedBookingSnapshot = createBookingSnapshot(); resetEventWorkspaceState(); bookingSequence += 1; bookingStep = 4; render("booking"); });
   app.querySelector("#release-deposit")?.addEventListener("click", () => { depositDeduction = 0; depositView = "release_approval_pending"; render("deposit"); });
   app.querySelector("#propose-deduction")?.addEventListener("click", () => { depositView = "deduction"; render("deposit"); });
   app.querySelector("#cancel-deduction")?.addEventListener("click", () => { depositView = "review"; render("deposit"); });

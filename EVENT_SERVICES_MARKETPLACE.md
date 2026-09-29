@@ -416,6 +416,22 @@ Every vendor profile should support:
 
 Do not use a single vague “Verified” badge. Display the specific checks completed and their expiry dates.
 
+### Vendor offering catalogue and package builder
+
+An authorized vendor owner or catalogue administrator should be able to create a private draft and publish a versioned offering without platform staff rewriting it. Each offering must record:
+
+- Supplier, category, title, description, inclusions, exclusions, and service area.
+- Selling model: pre-made package, organizer-configurable package, configurable package with custom-quote escape hatch, or quote-only service.
+- Price method: flat, per attendee, hourly, per unit, tiered, or quote required; plus minimum order, option-level adjustments, tax profile, deposit or balance timing, and cancellation/refund terms.
+- Organizer-choice groups initialized from a category template—for example catering menu components and serving style; cake size, flavour, filling, icing, design, inscription, and pickup/delivery; or décor style, entertainment duration, participant capacity, staffing, equipment, and branded artwork. The vendor enables the groups and choices its package supports, edits the organizer-facing labels, and sets each automatic price adjustment and adjustment basis.
+- Required and optional selections, minimum/maximum choices, mutually exclusive options, dependencies, capacity, lead time, inventory, availability, delivery/setup/teardown windows, facility needs, and compatible venues.
+- Whether custom requests are accepted, which structured brief and private references are required, and whether a vendor quote must be returned before checkout.
+- A versioned cover image and other approved media, image-rights attestation, publishing status, author, timestamps, and audit history.
+
+Publishing creates a new immutable catalogue version, and its enabled option groups, organizer-facing labels, choice availability, and price adjustments become the configuration shown after an organizer selects that package. Existing confirmed orders retain the exact offering version, selections, quantities, prices, terms, tax profile, quote, and image reference they accepted even after a vendor changes or unpublishes a later catalogue version. A saved draft remains private; an organizer can select only an active published version that still passes availability and compatibility checks.
+
+The current prototype accepts one locally previewed JPEG, PNG, or WebP cover image up to 5 MB. Organizer custom-design references use the same prototype rule and remain private to the applicable organizer, vendor, and authorized support scope. Browser `accept`, filename, MIME declaration, and size checks improve usability but are not security boundaries. Production must enforce limits again on the server, verify the decoded media type, reject malformed or decompression-bomb content, scan and safely re-encode the image, remove metadata, constrain dimensions, generate safe derivatives, store objects outside executable/public paths, use access-controlled URLs for private references, and support moderation, retention, deletion, and image-rights complaints.
+
 ## Organizer comparison and selection
 
 The organizer chooses an offering, not merely a category label. Group competing packages by a specific service need—such as catering, magic show, face painting, cake, décor, or photo booth—and allow at most one selected package within a mutually exclusive group. Complementary groups may be combined when the venue and event permit them.
@@ -434,6 +450,10 @@ Every comparison card should show:
 Keep unavailable lower-priced packages visible by default. This lets the organizer make an informed trade-off between price, real availability, review evidence, scope, and fit instead of assuming the cheapest result can be booked. **Best match** prioritizes compatibility, availability, quality, price, response, and reliability; it never uses Gather’s commission rate. Price and rating sorts must preserve unmistakable availability labels, and sponsored placement must be separately labelled.
 
 For catering, collect cuisine, attendee count, menu/package, dietary support, allergy or cross-contact review needs, serving style, delivery/setup time, staff and tableware needs, venue-kitchen requirements, and organizer notes. Dietary and allergy fields describe vendor-reported capabilities; they must not promise “allergen-free.” A material allergy request requires a vendor acknowledgement or confirmation before the catering order becomes final. Sending the request does not count as confirmation: the response must come from an authenticated vendor user or a verified integration and remain tied to the exact package, date, time, attendance, and stated requirements.
+
+After choosing a provider package, the organizer configures only the choices published for that offering. Show included choices separately from paid upgrades, enforce required and minimum/maximum selections, and recalculate the supplier subtotal and tax as each option changes. Cake and other design-led services may accept a private reference image, but a reference is an input to the brief—not vendor acceptance, reproduction permission, availability confirmation, or a final price.
+
+If a selected option or uploaded reference changes the service to custom work, replace the instant-purchase state with **Quote required**. The organizer submits a versioned brief; the vendor returns an itemized quote with scope, price, tax, schedule, assumptions, substitutions, terms, and expiry. Payment stays blocked until the organizer accepts a still-valid quote and the platform reruns availability and compatibility. Never silently treat a custom upload as an order or add an estimated custom-work charge to Total due today.
 
 Before payment, recheck the purpose status and every selected offering using its complete service interval and current capacity, lead time, service area, venue policy, facility requirements, configuration, inventory, price, tax profile, and cancellation terms. If the use requires venue approval, remove the Instant Book promise and block payment until a recorded approval changes the status. If a selected package becomes invalid, preserve it as **Needs attention**, explain why, and require the organizer to replace or remove it—never silently remove it or reduce the charge. Snapshot the purpose, material answers, policy result, selected package, configuration, price, tax, terms, eligibility evidence, and supplier identity when payment is confirmed.
 

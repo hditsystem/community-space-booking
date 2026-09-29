@@ -147,6 +147,10 @@ Each generated requirement records its source—law/regulator, venue policy, ven
 - No commission is charged on taxes, tips, refundable deposits, government fees, donations, or raffle proceeds.
 - Venues control whether outside vendors are allowed, approval-required, preferred, exclusive, or prohibited by category.
 - Vendor services support fixed packages, quote-required services, or referral/concierge flows.
+- Vendors publish versioned offerings as pre-made, organizer-configurable, configurable-with-custom-quote, or quote-only services. Category templates initialize relevant option groups; the vendor enables supported groups and choices, edits organizer-facing labels, and sets option-level price adjustments and adjustment bases. The published option structure—not a separate hard-coded checkout form—drives organizer configuration. The catalogue also records inclusions, capacity, lead time, availability, facility needs, service area, venue compatibility, tax profile, and terms.
+- After selecting a package, the organizer chooses only the menu, design, fulfilment, staffing, equipment, or other options that the vendor published. Required and minimum/maximum choice rules are enforced, and every paid selection updates the supplier subtotal and tax before payment.
+- A custom design, menu, scope, or private reference image changes the affected service to **Quote required** when the vendor has not published an instant price for it. Uploading a reference or requesting a quote never confirms the service; payment remains blocked until an itemized, unexpired vendor quote is accepted and revalidated.
+- Confirmed vendor orders snapshot the published catalogue version, selected option IDs and displayed labels, quantities, option adjustments, final price, tax, terms, accepted quote, and image reference. Publishing or unpublishing a later version never rewrites an existing order or its invoice.
 - If the venue booking changes or is cancelled, every linked vendor order receives an explicit impact assessment; it is not silently cancelled or refunded under the venue's policy.
 - Organizers compare competing packages within a specific service need rather than seeing one undifferentiated add-on. Each result shows the supplier, scope, availability, total or pricing basis, rating and verified-review count, guest capacity, lead time, service area, venue compatibility, cancellation terms, and the exact reason when it cannot be booked.
 - Start with compact service-category cards: show recommended and already-selected categories first, then provide a visible **Browse all compatible services** action. Opening a category reveals its competing provider packages; returning to the category list preserves choices made elsewhere. This reduces one long add-on wall without hiding general options the facility permits.
@@ -311,6 +315,8 @@ Keep the first build narrow. The pilot should prove that accurate inventory can 
 - Purpose-driven required-fee and compliance checklist, with included, required, recommended, and other compatible items clearly separated.
 - Staged add-on selection with fit, availability, quantity, and revalidation rules; optional paid items are never preselected.
 - Compact category-first event-service suggestions shown separately from required venue charges, with a general **Browse all compatible services** fallback.
+- Provider-package configuration with category-appropriate menu, design, service-style, fulfilment, staffing, equipment, and quantity choices; included options and paid upgrades are distinct and the total changes live.
+- Private custom-reference upload and quote-gated custom work. The organizer sees accepted file rules, quote status, itemized adjustment, expiry, and a clear checkout block until the quote is accepted and revalidated.
 - Full price breakdown and policy acceptance.
 - Secure card or digital-wallet checkout.
 - Clear pages for payment processing, booking confirmation, payment failure, cancellation, completion, and refunds.
@@ -366,6 +372,14 @@ The clickable prototype demonstrates this workspace only in browser memory. It d
 - Support tooling with time-limited, audited access.
 - Privacy, retention, export, deletion, incident-response, and backup procedures.
 - Curated vendor onboarding, category-specific credential review, connected payouts, vendor-order support, commission disclosure, and marketplace reporting data.
+
+### Vendor operations
+
+- Vendor-owner catalogue workspace with private drafts, preview, versioned publishing, unpublishing, and an audit history; fulfilment-only and finance-only roles cannot alter published offerings.
+- Pre-made, configurable, hybrid configurable/custom-quote, and quote-only offerings with flat, per-attendee, hourly, per-unit, tiered, or quote pricing.
+- Category-template organizer-choice groups with vendor-controlled enablement, organizer-facing labels, choice availability, and price-adjustment basis; plus required/minimum/maximum rules, dependencies, inclusions, capacity, inventory, lead time, service area, compatible venues, fulfilment windows, tax profile, and cancellation/refund terms. Published groups drive organizer checkout, while confirmed orders retain their accepted catalogue snapshot.
+- Structured custom briefs and itemized vendor quotes with expiry, assumptions, substitutions, response identity, and immutable accepted snapshots.
+- Offering cover media and private organizer references. The prototype rule is one JPEG, PNG, or WebP file up to 5 MB; production must enforce size and decoded media type server-side, scan and safely re-encode images, remove metadata, constrain dimensions, store private references behind scoped access, and support retention, deletion, moderation, and image-rights controls.
 
 ### Defer until the pilot proves demand
 
