@@ -402,6 +402,8 @@ Where the payment architecture uses both, model the platform-to-connected-accoun
 
 ## Vendor profile and onboarding requirements
 
+**Current prototype and pilot rule:** a participating vendor may select any service category the platform currently supports, operate in more than one category, and publish an offering without a separate category-approval step. Each offering still has one primary category, which selects the appropriate package template and organizer questions. Future production may add requested, active, action-required, expired, or paused category states and require category-specific evidence only where operational or regulatory needs justify it.
+
 Every vendor profile should support:
 
 - Legal/business identity and payout onboarding.

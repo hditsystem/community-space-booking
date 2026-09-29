@@ -371,10 +371,11 @@ The clickable prototype demonstrates this workspace only in browser memory. It d
 - Reconciliation exceptions, seller balances, transfer/payout monitoring, fee-policy audit, and controlled post-event adjustments.
 - Support tooling with time-limited, audited access.
 - Privacy, retention, export, deletion, incident-response, and backup procedures.
-- Curated vendor onboarding, category-specific credential review, connected payouts, vendor-order support, commission disclosure, and marketplace reporting data.
+- Curated vendor participation for the controlled pilot, connected payouts, vendor-order support, commission disclosure, and marketplace reporting data. Curated participation determines which vendors enter the pilot; it does not limit an admitted vendor to a pre-approved category in the current prototype. Category-specific credential review remains a future production control where evidence shows it is needed.
 
 ### Vendor operations
 
+- For the current prototype and early pilot workflow, a participating vendor may choose any service category the platform currently supports and create offerings in more than one category. There is no category-request or category-approval gate in this iteration; every offering still has one primary category so the correct organizer-choice template, venue-compatibility rules, invoicing classification, and marketplace filters are used.
 - Vendor-owner catalogue workspace with private drafts, preview, versioned publishing, unpublishing, and an audit history; fulfilment-only and finance-only roles cannot alter published offerings.
 - Pre-made, configurable, hybrid configurable/custom-quote, and quote-only offerings with flat, per-attendee, hourly, per-unit, tiered, or quote pricing.
 - Category-template organizer-choice groups with vendor-controlled enablement, organizer-facing labels, choice availability, and price-adjustment basis; plus required/minimum/maximum rules, dependencies, inclusions, capacity, inventory, lead time, service area, compatible venues, fulfilment windows, tax profile, and cancellation/refund terms. Published groups drive organizer checkout, while confirmed orders retain their accepted catalogue snapshot.
@@ -385,7 +386,8 @@ The clickable prototype demonstrates this workspace only in browser memory. It d
 
 - Full approval-request processing, staff decision, and inquiry messaging beyond the fail-closed approval state demonstrated in checkout.
 - Recurring bookings, waitlists, competitive bidding, discount codes, and loyalty features.
-- Unrestricted vendor self-registration and automated complex vendor bundles; the pilot may use curated, manually supported service packages.
+- Unrestricted public vendor self-registration and automated complex vendor bundles. Pilot participation may remain curated even though each participating vendor can freely choose among all service categories currently supported by the prototype.
+- Category-request statuses, category-specific publishing approval, credential-expiry enforcement, and automatic category suspension. These remain planned production safeguards and are not gates in the current open category selector.
 - Native mobile apps.
 - Complex revenue management or dynamic pricing.
 - Multi-party event planning and attendee accounts.
