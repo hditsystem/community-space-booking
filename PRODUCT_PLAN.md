@@ -266,6 +266,18 @@ Gather has four primary **account contexts**. An account context identifies the 
 
 These are twelve representative roles for workflow and permission testing, not twelve permanent identity types. A person has one identity and may hold multiple organization memberships—for example, someone may book a family event as a customer, manage one association as a booking manager, and serve as a read-only board member in another organization. Each membership records the tenant, role, status, and effective permissions. The user selects an **active context** before entering a private workspace, and every private action is evaluated against that active membership. Switching context must not merge data, permissions, or financial records across organizations.
 
+### Signup and onboarding journeys
+
+Public account creation should offer three task-based paths while preserving one reusable personal identity:
+
+- **Organizer / booking owner:** account creation is optional because guest checkout remains supported. Verify the email, then either link a just-completed booking through a secure, expiring booking-specific claim token or continue to an empty customer account. Never rely on a guessable booking reference alone to establish ownership.
+- **Space operator:** verify the account owner, create the operator organization, outline the first space, then collect bookable days and hours, base pricing, deposit policy, calendar source of truth, first staff invitation, and payment/payout readiness. The listing remains a private draft until required policy, identity, payout, availability, and listing checks pass. Launch commercial defaults are visible as configurable terms: $0 subscription and 0% venue commission, with payment-processing treatment shown separately.
+- **Event-service vendor:** verify the account owner, create the vendor business, select any currently supported service categories, then collect tax/invoice configuration, the first offering outline, first staff invitation, and payout readiness. Category choice is open in the current plan and a vendor may serve multiple categories; future category-specific credentials or moderation statuses may restrict publication without forcing a second identity.
+
+The first verified person becomes the organization owner/administrator for an operator or vendor. Additional staff join through expiring, email-bound invitations into the correct tenant and are assigned least-privilege roles. Gather platform-team accounts are never available through public signup; they require an internal invitation and stronger administrative controls.
+
+Onboarding completion should distinguish **identity verified**, **organization/profile prepared**, **listing or offering draft**, and **payout connected** rather than presenting one misleading “approved” state. A representative demo-workspace handoff may be offered in the prototype, but it must be an explicit reviewer action and must not imply that the entered data created or published a real record. The separate demo-account selector remains available for testing all twelve representative permission roles.
+
 ### Representative role responsibilities
 
 - **Organizer / booking owner:** completes Instant Book checkout, receives customer invoices and receipts, manages permitted booking changes, responds to a documented security-deposit claim, and reviews each eligible completed venue or vendor service. The organizer cannot see private seller payouts or platform controls.
@@ -283,7 +295,7 @@ These are twelve representative roles for workflow and permission testing, not t
 
 ### Boundaries and non-account parties
 
-- An **anonymous visitor** may search and view public listings without a membership. Public access never implies access to customer, seller, or platform records.
+- An **anonymous visitor** may search, view public listings, and complete guest checkout without a membership. Later private booking access requires verified control of the organizer email or a signed, short-lived booking-management or claim token; a booking reference alone is never proof of ownership. Public access never implies access to other customer, seller, or platform records.
 - An **attendee** may receive directions or event information from the organizer but does not control the booking and does not need an account in the pilot. Multi-party planning and attendee accounts remain deferred.
 - A community association, venue business, vendor business, and Gather are organizations or tenants, not user roles. Employment or volunteer status does not determine permissions.
 - Payment processors, banks, tax services, email providers, Communal, and other calendar or operator systems are external systems, not human users. Their service accounts and API credentials require separate ownership, scopes, rotation, audit, and revocation controls.
@@ -298,7 +310,7 @@ These are twelve representative roles for workflow and permission testing, not t
 - Require stronger controls for privileged operations: recent authentication where appropriate, approval policy, reason codes, immutable audit events, and alerts for material access, permission, policy, payout, refund, or deposit changes.
 - Make support access time-limited, purpose-bound, auditable, and revocable. Platform employment alone must not provide silent unrestricted access to participant data.
 
-The clickable prototype models account selection, role-specific navigation, and client-side route guards only. It does not authenticate identities or provide real authorization. Production must use secure identity verification, server-managed sessions, tenant-scoped authorization, and default-deny enforcement; the backend must return an authorization error even if a user bypasses the interface and calls a protected endpoint directly.
+The clickable prototype models simulated email-link entry, task-based account selection, browser-only organizer/operator/vendor onboarding, role-specific navigation, and client-side route guards. It does not create an account, organization, membership, invitation, listing, offering, vendor admission, seller approval, email verification, or payout connection, and it does not provide real authentication or authorization. Production must use secure identity verification, server-managed sessions, tenant-scoped authorization, and default-deny enforcement; the backend must return an authorization error even if a user bypasses the interface and calls a protected endpoint directly.
 
 ## Pilot MVP
 
@@ -364,7 +376,7 @@ The clickable prototype demonstrates this workspace only in browser memory. It d
 
 ### Platform operations
 
-- Host identity and payout onboarding before a listing becomes bookable.
+- Space-operator identity and payout onboarding before a listing becomes bookable.
 - Listing moderation and report-listing flow.
 - Review reporting and moderation with policy-based decisions, supplier responses, immutable booking eligibility, duplicate prevention, and an audit trail for removal or reinstatement.
 - Payment webhook processing, retry queues, refund failures, and dispute evidence.
@@ -386,7 +398,7 @@ The clickable prototype demonstrates this workspace only in browser memory. It d
 
 - Full approval-request processing, staff decision, and inquiry messaging beyond the fail-closed approval state demonstrated in checkout.
 - Recurring bookings, waitlists, competitive bidding, discount codes, and loyalty features.
-- Unrestricted public vendor self-registration and automated complex vendor bundles. Pilot participation may remain curated even though each participating vendor can freely choose among all service categories currently supported by the prototype.
+- Unrestricted public vendor admission and automated complex vendor bundles. The public prototype route demonstrates in-memory setup only and does not admit a vendor to the controlled pilot. Pilot participation may remain curated even though each admitted vendor can freely choose among all service categories currently supported by the prototype.
 - Category-request statuses, category-specific publishing approval, credential-expiry enforcement, and automatic category suspension. These remain planned production safeguards and are not gates in the current open category selector.
 - Native mobile apps.
 - Complex revenue management or dynamic pricing.
@@ -462,7 +474,7 @@ Do not claim that Communal currently provides the required API until its current
 
 - Interview community-association managers, booking coordinators, board members, finance staff, other team members who handle rentals, and customers.
 - Configure at least ten real spaces from five community associations using actual rate sheets, rules, calendars, add-ons, and deposit policies.
-- Test the clickable prototype with exact date/time searches and complete mock checkout.
+- Test the clickable prototype across organizer, space-operator, and vendor onboarding; explicit handoffs to representative workspaces; exact date/time searches; vendor-service configuration; and complete mock checkout. Confirm that reviewer demo accounts remain separate from public account entry.
 - Secure five pilot associations that will keep a digital calendar current.
 - Record outside-vendor policies and requirement triggers for each pilot space.
 - Interview vendors across catering, cakes, décor, entertainment, photography, rentals, and cleaning; validate package structure and acceptable marketplace economics.

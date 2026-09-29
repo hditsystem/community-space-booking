@@ -8,7 +8,7 @@ The plan recommends validating the workflow before building production infrastru
 
 The reassessed product direction and terminology are documented in [PRODUCT_PLAN.md](PRODUCT_PLAN.md). The event catalogue, vendor categories, dynamic booking checklist, and configurable vendor-commission strategy are documented in [EVENT_SERVICES_MARKETPLACE.md](EVENT_SERVICES_MARKETPLACE.md). The booking-time invoice, post-event closeout, platform-fee invoice, payout statement, and reconciliation design are documented in [INVOICING_AND_SETTLEMENT.md](INVOICING_AND_SETTLEMENT.md). The supplied source plan remains unchanged.
 
-The clickable prototype now demonstrates the venue-booking foundation, a two-sided independent-vendor marketplace, booking-time supplier documents, an organizer-only **My Event** workspace, and a post-event invoicing and settlement walkthrough. It remains a front-end concept: all records, statuses, messages, offering drafts, image previews, quotes, fees, invoices, refunds, and payouts are simulated in memory.
+The clickable prototype now demonstrates the venue-booking foundation, a two-sided independent-vendor marketplace, three signup and onboarding journeys, booking-time supplier documents, an organizer-only **My Event** workspace, and a post-event invoicing and settlement walkthrough. It remains a front-end concept: all identities, verification states, records, statuses, messages, offering drafts, image previews, quotes, fees, invoices, refunds, and payouts are simulated in memory.
 
 ## Included journeys
 
@@ -39,14 +39,19 @@ The clickable prototype now demonstrates the venue-booking foundation, a two-sid
 - Vendor-owner offering builder for private drafts and published marketplace packages, including selling model, pricing basis, package inclusions, category-template option groups, organizer-facing choice labels and price adjustments, custom-request policy, capacity, lead time, compatible venues, and a cover image; the published option structure drives the organizer configurator
 - Open prototype category access: a vendor admin may choose any service category currently shown in the offering builder and create separate offerings in multiple categories without a category-approval gate; the selected category loads the appropriate organizer-choice template
 - Vendor cover images and organizer custom-reference images restricted in the prototype to one JPEG, PNG, or WebP file up to 5 MB, with a local preview and clear validation error
-- Demo sign-in and account switching across customer, space-operator, event-service-vendor, and Gather platform contexts
+- Separate signup journeys for an organizer, a space operator, and an event-service vendor, with simulated browser-only email verification, required-field validation, back-step state retention, and explicit prototype-only boundaries
+- Organizer onboarding with optional post-booking claim-link setup; guest booking remains available and no password is requested by the prototype
+- Space-operator onboarding for organization details, a first space, bookable days and hours, pricing, deposit policy, calendar source of truth, a first team invitation, payout-readiness acknowledgement, and visible default $0 subscription / 0% venue commission terms
+- Vendor onboarding for business details, unrestricted multi-category selection across the currently supported service catalogue, tax and invoice setup, a first offering outline, a first team invitation, and payout-readiness acknowledgement
+- Explicit handoffs from completed onboarding outlines into the appropriate fictional sample workspace, including a vendor handoff that pre-fills the first offering and loads its category-specific configuration template
+- Simulated email-link sign-in plus a separate reviewer-only demo-account selector across customer, space-operator, event-service-vendor, and Gather platform contexts
 - Twelve representative permission roles with role-specific workspaces, navigation, and route-access demonstrations
 - Platform-super-administration preview with global organization, booking/order, deposit and settlement health; redacted cross-tenant records; commercial terms; and reason-coded, expiring, audited read-only support sessions
 - Community-association pilot explanation
 
 ## Demo accounts and access model
 
-Choose **Demo sign in** to select one of four account contexts and twelve representative roles:
+Choose **Demo accounts** to select one of four account contexts and twelve representative roles. This reviewer shortcut remains separate from **Sign in** and **Create account**:
 
 | Account context | Representative roles in the prototype |
 |---|---|
@@ -57,9 +62,9 @@ Choose **Demo sign in** to select one of four account contexts and twelve repres
 
 The account switcher selects an **active context**—the organization and role whose workspace and permissions are being demonstrated. In production, one identity may hold memberships in multiple organizations and may have a different role in each; a user would switch context without creating duplicate credentials. Permissions should follow least privilege and separation of duties. For example, operations staff may record inspection evidence and propose a deposit outcome, while an authorized finance role approves the financial outcome.
 
-An anonymous visitor can browse public listings without an account. The organizer controls the booking; attendees are not account holders in the pilot. Payment processors, banks, Communal or other calendar systems, tax services, and email providers are external systems—not human user types—and require separately controlled integration credentials.
+An anonymous visitor can browse public listings and complete guest checkout without an account. The organizer controls the booking; attendees are not account holders in the pilot. Later private booking access requires verified control of the organizer email or a signed, expiring management or claim link—not a booking reference alone. Payment processors, banks, Communal or other calendar systems, tax services, and email providers are external systems—not human user types—and require separately controlled integration credentials.
 
-The sign-in flow and access guards in this static prototype are simulated entirely in the browser. They are useful for reviewing navigation and permission boundaries, but they are **not authentication or security controls**. A production implementation must authenticate identities and enforce authorization on the server for every request and object, default to denying access, scope every membership and data lookup to the correct tenant, and keep privileged support access time-limited and auditable. The My Event messages, requirement updates, schedule details, access information, and change or cancellation previews are fictional in-memory demonstrations; they do not contact a venue or vendor, amend an order, cancel a booking, issue a refund, or move money. Review records, ratings, excerpts, publication, and edits are also fictional in-memory demonstrations; they do not contact a supplier or publish to a real marketplace.
+The signup, onboarding, sign-in, and access guards in this static prototype are simulated entirely in the browser. They do not create an account or organization, send or verify email, publish a listing, admit or approve a vendor, invite a teammate, connect a payout account, upload information to a server, or persist after refresh. They are useful for reviewing navigation and permission boundaries, but they are **not authentication or security controls**. A production implementation must authenticate identities and enforce authorization on the server for every request and object, default to denying access, scope every membership and data lookup to the correct tenant, and keep privileged support access time-limited and auditable. Onboarding completion opens fictional representative workspaces; only the vendor journey copies its first-offering name and category into an in-memory draft. The My Event messages, requirement updates, schedule details, access information, and change or cancellation previews are fictional in-memory demonstrations; they do not contact a venue or vendor, amend an order, cancel a booking, issue a refund, or move money. Review records, ratings, excerpts, publication, and edits are also fictional in-memory demonstrations; they do not contact a supplier or publish to a real marketplace.
 
 This prototype iteration demonstrates instantly priced fixed and per-person vendor packages, configurable package choices with live price changes, and a quote gate for custom work. The quote response is a clearly labelled in-memory simulation; no vendor is contacted, no file is uploaded to a server, and no quote is legally accepted. Referral or concierge orders remain documented rather than simulated.
 
@@ -80,6 +85,13 @@ Then open `http://127.0.0.1:4173`.
 No packages, credentials, build step, or external backend are required. All identities, memberships, permissions, listings, availability, totals, taxes, payments, confirmation messages, and dashboard data are fictional and simulated. The prototype does not authenticate users, collect card details, create charges, send email, or reserve a real space.
 
 ## Suggested pilot script
+
+Start with **Create account** and review all three onboarding paths before testing a booking:
+
+1. Choose **Book a space**. Verify the prototype explains that an organizer account is optional, requires the visible demo verification code, and may either claim a completed booking by reference or continue without one. Use Back and confirm the entered identity is retained.
+2. Choose **List a space**. Enter an organization and first-space outline, then configure bookable weekdays and hours, an hourly rate, optional fixed deposit, calendar source of truth, and a teammate invitation. Confirm the final screen keeps the listing in **Draft · not live**, payout as **Not connected**, and the default $0 subscription / 0% venue commission terms visible.
+3. Choose **Offer event services**. Select at least two of the six currently supported categories and confirm there is no category-approval gate in this iteration. Enter tax/invoice and first-offering details, then continue to the representative offering builder. Confirm the vendor demo context is activated only at that explicit handoff and the first offering name, category, and category-specific organizer-choice template are prefilled.
+4. Open **Demo accounts** and verify all four account contexts and twelve fictional roles are still available independently of account creation. Return to **Sign in** and confirm the secure-email-link action is visibly simulated and sends no email.
 
 Use Ridgeview Community Hall with 60 attendees and complete this focused add-on test:
 

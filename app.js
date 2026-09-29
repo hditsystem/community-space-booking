@@ -207,6 +207,36 @@ let supportAuditEvents = [
   { time: "Sep 26 · 11:03 AM", actor: "Riley Patel", action: "Exported reconciliation exception", target: "PST-WSE-1033", caseId: "FIN-1912", scope: "Finance record", reason: "Investigate processor allocation", outcome: "Export recorded" }
 ];
 
+const onboardingDefinitions = {
+  organizer: { route: "signup-organizer", label: "Organizer", title: "Create an organizer account", icon: "◎", demoRoleId: "customer-organizer", demoRoute: "customer-dashboard", steps: ["Account", "Verify email", "Booking access"] },
+  operator: { route: "signup-operator", label: "Space operator", title: "Set up a space-operator account", icon: "▱", demoRoleId: "venue-admin", demoRoute: "dashboard", steps: ["Account", "Organization", "First space", "Booking readiness"] },
+  vendor: { route: "signup-vendor", label: "Event-service vendor", title: "Set up a vendor account", icon: "✦", demoRoleId: "vendor-admin", demoRoute: "vendor-offerings", steps: ["Account", "Business", "Service categories", "Seller readiness"] }
+};
+
+const newOnboardingState = type => ({
+  type,
+  step: 1,
+  completed: false,
+  identity: { firstName: "", lastName: "", email: "", phone: "", consent: false, emailVerified: false, verificationCode: "" },
+  organizer: { claimBooking: "yes", bookingReference: "BKG-1048" },
+  operator: {
+    legalName: "", publicName: "", organizationType: "community_association", organizationEmail: "", website: "", address: "", city: "Calgary", province: "Alberta", postalCode: "",
+    siteName: "", spaceName: "", spaceType: "hall", capacity: "", description: "", hourlyRate: "", depositMode: "fixed", depositAmount: "300",
+    weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], openTime: "08:00", closeTime: "23:00", closesNextDay: false, calendarMode: "gather", minimumNotice: "2", inviteEmail: "", inviteRole: "booking_manager", payoutAcknowledged: false
+  },
+  vendor: {
+    legalName: "", publicName: "", businessEmail: "", phone: "", website: "", city: "Calgary", serviceArea: "Calgary", travelRadius: "25", categories: [],
+    taxStatus: "not_registered", invoicePrefix: "", cancellationSummary: "Full refund until 7 days before service; changes subject to availability.", inviteEmail: "", inviteRole: "fulfilment", payoutAcknowledged: false, firstOfferingName: "", primaryCategory: ""
+  }
+});
+
+let onboardingStates = {
+  organizer: newOnboardingState("organizer"),
+  operator: newOnboardingState("operator"),
+  vendor: newOnboardingState("vendor")
+};
+let simulatedSignInEmail = "";
+
 const financeDemo = {
   bookingId: "BKG-1033",
   event: "Singh family reception",
@@ -358,7 +388,7 @@ const demoRoles = [
   }
 ];
 
-const publicRoutes = new Set(["home", "explore", "venue", "booking", "booking-documents", "host", "sign-in"]);
+const publicRoutes = new Set(["home", "explore", "venue", "booking", "booking-documents", "host", "login", "create-account", "signup-organizer", "signup-operator", "signup-vendor", "sign-in"]);
 const storedDemoRole = (() => { try { return sessionStorage.getItem("gather-demo-role"); } catch { return null; } })();
 let activeRoleId = demoRoles.some(role => role.id === storedDemoRole) ? storedDemoRole : null;
 const activeRole = () => demoRoles.find(role => role.id === activeRoleId) || null;
@@ -374,6 +404,11 @@ const canAccessRoute = route => {
   return publicRoutes.has(route) || (route === "role-home" ? Boolean(activeRole()) : Boolean(activeRole()?.routes.includes(route)));
 };
 const routeLabels = {
+  login: "Sign in",
+  "create-account": "Create account",
+  "signup-organizer": "Organizer signup",
+  "signup-operator": "Space-operator onboarding",
+  "signup-vendor": "Vendor onboarding",
   booking: "Instant Book checkout",
   "booking-documents": "Checkout booking documents",
   "customer-dashboard": "My bookings",
@@ -1296,7 +1331,7 @@ function successPage() {
   const vendorCount = snapshot.vendors.length;
   const manageAction = activeRole()?.accountType === "customer"
     ? '<button class="button button-green" data-route="customer-event">Manage My Event</button>'
-    : '<button class="button button-green" data-route="sign-in">Sign in to manage My Event</button>';
+    : '<button class="button button-green" type="button" data-start-onboarding="organizer" data-claim-booking="true">Create account and link this booking</button>';
   return `<div class="success-card"><div class="success-icon">✓</div><span class="eyebrow">Demo booking · ${snapshot.bookingId}</span><h1>Payment received. Booking confirmed.</h1><span class="status-pill confirmed">Venue and selected services confirmed</span><p>${snapshot.space.name} would be reserved for ${new Date(snapshot.booking.date + "T12:00:00").toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" })} from ${formatTime(snapshot.booking.start)} to ${formatTime(snapshot.booking.end)}</p><p><strong>Demo total:</strong> ${money(snapshot.totals.dueNow)} CAD${snapshot.totals.deposit ? `, including the separate ${money(snapshot.totals.deposit)} refundable security deposit` : ""}.</p><div class="confirmation-docs"><strong>Documents available now</strong><span>✓ Venue supplier invoice</span>${vendorCount ? `<span>✓ ${vendorCount} vendor supplier invoice${vendorCount === 1 ? "" : "s"}</span>` : ""}<span>✓ Payment receipt</span>${snapshot.totals.deposit ? "<span>✓ Security-deposit record</span>" : ""}</div><p>Use My Event for supplier-specific status, requirements, messages, the day-of schedule, access release, and change or cancellation impact previews.</p><p><strong>Prototype only:</strong> no charge, email, message, or real reservation was created.</p><div class="button-row">${manageAction}<button class="button button-light" data-route="booking-documents">View booking documents</button><button class="button button-light" data-route="home">Browse more spaces</button></div></div>`;
 }
 
@@ -1340,6 +1375,96 @@ function roleContextNotice() {
   if (!role) return "";
   const context = accountContext(role.accountType);
   return `<div class="role-context-notice"><span class="role-icon" aria-hidden="true">${context.icon}</span><div><strong>${role.shortRole} view</strong><span>${role.summary}</span></div><button class="text-button" type="button" data-route="role-home">View permissions</button></div>`;
+}
+
+function onboardingBoundary() {
+  return `<div class="onboarding-boundary" role="note"><strong>Prototype only</strong><span>These forms demonstrate onboarding. They do not create an account, send email, verify identity, connect a payout account, publish a real listing, invite a teammate, or move money. Please use fictional information.</span></div>`;
+}
+
+function loginPage() {
+  const sentState = simulatedSignInEmail ? `<div class="auth-result" role="status"><span class="success-icon small">✓</span><div><strong>Sign-in link simulated</strong><p>A production system would send a secure link to <b>${escapeHtml(simulatedSignInEmail)}</b>. No email was sent and no session was created.</p></div></div>` : "";
+  return `<section class="auth-page"><div class="auth-shell"><div class="auth-intro"><span class="eyebrow">Account access</span><h1>Sign in to Gather.</h1><p>Customers, space operators, and vendors use one personal identity, then switch between the organizations and roles they belong to.</p><div class="auth-tabs" role="navigation" aria-label="Account access"><button class="active" type="button" aria-current="page">Sign in</button><button type="button" data-route="create-account">Create account</button></div>${onboardingBoundary()}</div><div class="auth-panel"><span class="account-icon" aria-hidden="true">◎</span><h2>Email sign-in</h2><p>This concept uses a secure email link so the prototype never asks for or stores a password.</p><form id="prototype-signin-form" class="onboarding-form"><label class="onboarding-field"><span>Email address *</span><input name="email" type="email" autocomplete="email" value="${escapeHtml(simulatedSignInEmail)}" required></label><button class="button button-green button-wide" type="submit">Simulate secure sign-in link</button></form>${sentState}<div class="auth-reviewer"><strong>Reviewing the platform?</strong><span>Use the fictional role workspaces without signing in.</span><button class="button button-light button-wide" type="button" data-route="sign-in">Explore demo roles</button></div></div></div></section>`;
+}
+
+function createAccountPage() {
+  const cards = [
+    { type: "organizer", title: "Book a space", copy: "Browse and book without an account. Create one to manage bookings, documents, changes, deposits, and reviews.", action: "Create organizer account", secondary: '<button class="text-button" type="button" data-route="explore">Continue as guest</button>' },
+    { type: "operator", title: "List a space", copy: "Set up a space-operator organization, your first listing, availability, policies, and payout readiness.", action: "Start operator setup", secondary: "" },
+    { type: "vendor", title: "Offer event services", copy: "Set up a vendor business, choose any supported service categories, and prepare configurable offerings.", action: "Start vendor setup", secondary: "" }
+  ];
+  const cardMarkup = cards.map(card => { const state = onboardingStates[card.type]; const started = state.step > 1 || state.completed; return `<article class="signup-choice-card"><span class="account-icon" aria-hidden="true">${onboardingDefinitions[card.type].icon}</span><span class="account-badge">${onboardingDefinitions[card.type].label}</span><h2>${card.title}</h2><p>${card.copy}</p><button class="button button-dark button-wide" type="button" data-start-onboarding="${card.type}">${started ? `Resume ${onboardingDefinitions[card.type].label.toLowerCase()} setup` : card.action}</button>${card.secondary}</article>`; }).join("");
+  return `<section class="signup-page"><div class="signup-hero"><span class="eyebrow">Create account</span><h1>How will you use Gather?</h1><p>One sign-in can be used for personal bookings and for space-operator or vendor organizations you join later. Choose the journey you want to review first.</p><div class="auth-tabs" role="navigation" aria-label="Account access"><button type="button" data-route="login">Sign in</button><button class="active" type="button" aria-current="page">Create account</button></div></div><div class="signup-content">${onboardingBoundary()}<div class="signup-choice-grid">${cardMarkup}</div><aside class="reviewer-entry"><div><span class="eyebrow">Reviewer shortcut</span><h2>Explore every permission role.</h2><p>Open the twelve fictional customer, operator, vendor, and Gather platform workspaces without completing onboarding.</p></div><button class="button button-light" type="button" data-route="sign-in">Explore demo roles →</button></aside><p class="platform-signup-note"><strong>Platform administrators do not sign up publicly.</strong> Gather team access would be internally provisioned, protected with strong authentication, and audited.</p></div></section>`;
+}
+
+function onboardingProgress(definition, state) {
+  return `<ol class="onboarding-progress" aria-label="${definition.label} onboarding progress">${definition.steps.map((label, index) => { const number = index + 1; const status = state.completed || number < state.step ? "complete" : number === state.step ? "current" : ""; return `<li class="${status}" ${number === state.step && !state.completed ? 'aria-current="step"' : ""}><span>${state.completed || number < state.step ? "✓" : number}</span><strong>${label}</strong></li>`; }).join("")}</ol>`;
+}
+
+function onboardingButtons(type, state, finalLabel = "Continue") {
+  const back = state.step === 1 ? '<button class="button button-light" type="button" data-route="create-account">← Account choices</button>' : '<button class="button button-light" type="button" data-onboarding-back>← Back</button>';
+  return `<div class="onboarding-actions">${back}<button class="button button-green" type="submit">${finalLabel}</button></div>`;
+}
+
+function sharedIdentityStep(type, state) {
+  const definition = onboardingDefinitions[type];
+  const emailCopy = type === "organizer" ? "We use this address to secure booking access and customer documents." : "This becomes the initial owner identity for the organization you set up.";
+  return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="${type}" data-onboarding-step="1"><div class="onboarding-section-head"><span class="account-badge">Step 1</span><h2>Create your personal identity</h2><p>One identity can later hold customer, space-operator, and vendor memberships. You will not need separate credentials for every organization.</p></div><div class="onboarding-field-grid"><label class="onboarding-field"><span>First name *</span><input name="firstName" autocomplete="given-name" value="${escapeHtml(state.identity.firstName)}" required></label><label class="onboarding-field"><span>Last name *</span><input name="lastName" autocomplete="family-name" value="${escapeHtml(state.identity.lastName)}" required></label><label class="onboarding-field"><span>Email address *</span><input name="email" type="email" autocomplete="email" value="${escapeHtml(state.identity.email)}" aria-describedby="onboarding-email-help" required><small id="onboarding-email-help">${emailCopy}</small></label><label class="onboarding-field"><span>Phone <small>optional</small></span><input name="phone" type="tel" autocomplete="tel" value="${escapeHtml(state.identity.phone)}"></label></div><label class="onboarding-consent"><input name="consent" type="checkbox" value="yes" ${state.identity.consent ? "checked" : ""} required><span><strong>Continue with fictional prototype data</strong><small>I understand that this does not create an account or send a verification message.</small></span></label>${onboardingButtons(type, state, type === "organizer" ? "Continue to email verification" : "Continue and simulate verified email")}</form>`;
+}
+
+function organizerStep(state) {
+  if (state.step === 1) return sharedIdentityStep("organizer", state);
+  if (state.step === 2) return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="organizer" data-onboarding-step="2"><div class="onboarding-section-head"><span class="account-badge">Step 2</span><h2>Verify your email</h2><p>A production system would send a short-lived code or secure link to <strong>${escapeHtml(state.identity.email)}</strong>. No email was sent by this prototype.</p></div><div class="demo-code"><span>Prototype verification code</span><strong>246810</strong><small>Visible only so a reviewer can complete the journey.</small></div><label class="onboarding-field compact"><span>Six-digit code *</span><input name="verificationCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" value="${escapeHtml(state.identity.verificationCode)}" aria-describedby="verification-error" required><small id="verification-error" class="field-error" role="alert" hidden>Enter the prototype code 246810.</small></label>${onboardingButtons("organizer", state, "Verify in prototype")}</form>`;
+  const snapshot = confirmedBookingSnapshot;
+  const reference = snapshot?.bookingId || state.organizer.bookingReference || "BKG-1048";
+  const claimDetail = snapshot ? `${escapeHtml(snapshot.space.name)} · ${formatTime(snapshot.booking.start)}–${formatTime(snapshot.booking.end)} · ${money(snapshot.totals.dueNow)}` : "Ridgeview Community Hall · fictional reviewer example";
+  return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="organizer" data-onboarding-step="3"><div class="onboarding-section-head"><span class="account-badge">Step 3</span><h2>Choose booking access</h2><p>Creating an account remains optional for booking. A guest booking can be linked only after control of its confirmation email is proven.</p></div><fieldset class="onboarding-choice-fieldset"><legend>What would you like to do?</legend><label class="onboarding-choice"><input type="radio" name="claimBooking" value="yes" ${state.organizer.claimBooking === "yes" ? "checked" : ""}><span><strong>Link a booking in this prototype</strong><small>Secure email proof would be required before access is granted.</small></span></label><label class="onboarding-choice"><input type="radio" name="claimBooking" value="no" ${state.organizer.claimBooking === "no" ? "checked" : ""}><span><strong>Create the account without linking a booking</strong><small>You can browse now and link a future booking later.</small></span></label></fieldset><div class="claim-preview"><span class="account-badge">Prototype match</span><h3>${escapeHtml(reference)}</h3><p>${claimDetail}</p><p>Account email: <strong>${escapeHtml(state.identity.email)}</strong></p><small id="booking-email-error" class="field-error" role="alert" hidden>This sample booking belongs to a different email. Go back and use its booking email, or continue without linking.</small><label class="onboarding-field"><span>Booking reference *</span><input name="bookingReference" value="${escapeHtml(reference)}" aria-describedby="booking-reference-error" required><small id="booking-reference-error" class="field-error" role="alert" hidden>Use the matched prototype reference shown above.</small></label><p><strong>Security boundary:</strong> A booking reference and email alone never grant access. Production would use a signed, expiring link delivered to the booking email.</p></div>${onboardingButtons("organizer", state, "Finish organizer demo")}</form>`;
+}
+
+function operatorStep(state) {
+  const operator = state.operator;
+  if (state.step === 1) return sharedIdentityStep("operator", state);
+  if (state.step === 2) return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="operator" data-onboarding-step="2"><div class="onboarding-section-head"><span class="account-badge">Step 2</span><h2>Your organization</h2><p>The person creating the organization receives the Owner / account administrator membership. Staff join later through invitations.</p></div><div class="onboarding-field-grid"><label class="onboarding-field"><span>Legal organization name *</span><input name="legalName" value="${escapeHtml(operator.legalName)}" required></label><label class="onboarding-field"><span>Public or trading name *</span><input name="publicName" value="${escapeHtml(operator.publicName)}" required></label><label class="onboarding-field"><span>Organization type *</span><select name="organizationType" required><option value="community_association" ${operator.organizationType === "community_association" ? "selected" : ""}>Community association</option><option value="nonprofit" ${operator.organizationType === "nonprofit" ? "selected" : ""}>Non-profit or registered charity</option><option value="business" ${operator.organizationType === "business" ? "selected" : ""}>Business</option><option value="public_body" ${operator.organizationType === "public_body" ? "selected" : ""}>Municipality or public body</option><option value="other" ${operator.organizationType === "other" ? "selected" : ""}>Other</option></select></label><label class="onboarding-field"><span>Organization email *</span><input name="organizationEmail" type="email" value="${escapeHtml(operator.organizationEmail || state.identity.email)}" required></label><label class="onboarding-field full"><span>Street address *</span><input name="address" autocomplete="street-address" value="${escapeHtml(operator.address)}" required></label><label class="onboarding-field"><span>City *</span><input name="city" value="${escapeHtml(operator.city)}" required></label><label class="onboarding-field"><span>Province *</span><input name="province" value="${escapeHtml(operator.province)}" required></label><label class="onboarding-field"><span>Postal code *</span><input name="postalCode" autocomplete="postal-code" value="${escapeHtml(operator.postalCode)}" required></label><label class="onboarding-field"><span>Website <small>optional</small></span><input name="website" type="url" value="${escapeHtml(operator.website)}" placeholder="https://"></label></div>${onboardingButtons("operator", state)}</form>`;
+  if (state.step === 3) return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="operator" data-onboarding-step="3"><div class="onboarding-section-head"><span class="account-badge">Step 3</span><h2>Your first bookable space</h2><p>Start with one space. Additional halls, rooms, kitchens, rinks, courts, studios, and outdoor areas can be added later.</p></div><div class="onboarding-field-grid"><label class="onboarding-field"><span>Venue or site name *</span><input name="siteName" value="${escapeHtml(operator.siteName)}" required></label><label class="onboarding-field"><span>Bookable space name *</span><input name="spaceName" value="${escapeHtml(operator.spaceName)}" required></label><label class="onboarding-field"><span>Space type *</span><select name="spaceType" required><option value="hall" ${operator.spaceType === "hall" ? "selected" : ""}>Hall</option><option value="meeting_room" ${operator.spaceType === "meeting_room" ? "selected" : ""}>Meeting room</option><option value="kitchen" ${operator.spaceType === "kitchen" ? "selected" : ""}>Kitchen</option><option value="rink" ${operator.spaceType === "rink" ? "selected" : ""}>Rink or court</option><option value="studio" ${operator.spaceType === "studio" ? "selected" : ""}>Studio</option><option value="outdoor" ${operator.spaceType === "outdoor" ? "selected" : ""}>Outdoor area</option><option value="other" ${operator.spaceType === "other" ? "selected" : ""}>Other</option></select></label><label class="onboarding-field"><span>Maximum attendees *</span><input name="capacity" type="number" min="1" step="1" value="${escapeHtml(operator.capacity)}" required></label><label class="onboarding-field full"><span>Short description *</span><textarea name="description" rows="4" required>${escapeHtml(operator.description)}</textarea></label></div><div class="readiness-note"><strong>Listing setup continues after onboarding</strong><span>Photos, amenities, accessibility, permitted event types, insurance rules, add-ons, and detailed venue policies must be completed before the listing can become bookable.</span></div>${onboardingButtons("operator", state)}</form>`;
+  const weekdayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => `<label><input type="checkbox" name="weekdays" value="${day}" ${operator.weekdays.includes(day) ? "checked" : ""}> ${day}</label>`).join("");
+  return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="operator" data-onboarding-step="4"><div class="onboarding-section-head"><span class="account-badge">Step 4</span><h2>Booking and payout readiness</h2><p>Set an initial availability and price outline. Production identity, tax, and payout setup must be completed before accepting live payment.</p></div><fieldset class="onboarding-choice-fieldset"><legend>Bookable days *</legend><div class="weekday-grid">${weekdayOptions}</div><small id="weekday-error" class="field-error" role="alert" hidden>Select at least one bookable day.</small></fieldset><div class="onboarding-field-grid"><label class="onboarding-field"><span>Opens *</span><input name="openTime" type="time" value="${escapeHtml(operator.openTime)}" required></label><div class="onboarding-field"><label class="field-label" for="operator-close-time">Closes *</label><input id="operator-close-time" name="closeTime" type="time" value="${escapeHtml(operator.closeTime)}" aria-describedby="time-error" required><small id="time-error" class="field-error" role="alert" hidden>Closing time must be later than opening time, or marked as next day.</small><label class="inline-checkbox"><input name="closesNextDay" type="checkbox" value="yes" ${operator.closesNextDay ? "checked" : ""}><span>Closes next calendar day</span></label></div><label class="onboarding-field"><span>Base hourly rate (CAD) *</span><input name="hourlyRate" type="number" min="0" step="0.01" value="${escapeHtml(operator.hourlyRate)}" required></label><label class="onboarding-field"><span>Refundable deposit</span><input name="depositAmount" type="number" min="0" step="0.01" value="${escapeHtml(operator.depositAmount)}"></label><label class="onboarding-field"><span>Minimum notice (days) *</span><input name="minimumNotice" type="number" min="0" step="1" value="${escapeHtml(operator.minimumNotice)}" required></label><label class="onboarding-field"><span>Optional teammate email</span><input name="inviteEmail" type="email" value="${escapeHtml(operator.inviteEmail)}"></label><label class="onboarding-field"><span>Optional teammate role</span><select name="inviteRole"><option value="booking_manager" ${operator.inviteRole === "booking_manager" ? "selected" : ""}>Booking manager</option><option value="operations" ${operator.inviteRole === "operations" ? "selected" : ""}>Operations / inspection staff</option><option value="finance" ${operator.inviteRole === "finance" ? "selected" : ""}>Finance and settlement</option><option value="viewer" ${operator.inviteRole === "viewer" ? "selected" : ""}>Board / auditor — read only</option></select></label></div><fieldset class="onboarding-choice-fieldset"><legend>Availability source *</legend><label class="onboarding-choice"><input type="radio" name="calendarMode" value="gather" ${operator.calendarMode === "gather" ? "checked" : ""}><span><strong>Use Gather as the source of truth</strong><small>Recommended for the pilot.</small></span></label><label class="onboarding-choice"><input type="radio" name="calendarMode" value="manual" ${operator.calendarMode === "manual" ? "checked" : ""}><span><strong>Manually update another calendar</strong><small>Every confirmed booking must be copied promptly. Manual double entry increases conflict risk.</small></span></label></fieldset><div class="commercial-defaults"><div><span>Subscription</span><strong>$0 default</strong></div><div><span>Venue commission</span><strong>0% default</strong></div><div><span>Processing</span><strong>Separate actual cost</strong></div></div><label class="onboarding-consent"><input name="payoutAcknowledged" type="checkbox" value="yes" ${operator.payoutAcknowledged ? "checked" : ""} required><span><strong>Simulate seller readiness</strong><small>I understand no identity check, bank connection, invitation, or payout setup occurs here.</small></span></label>${onboardingButtons("operator", state, "Finish operator demo")}</form>`;
+}
+
+function vendorStep(state) {
+  const vendor = state.vendor;
+  if (state.step === 1) return sharedIdentityStep("vendor", state);
+  if (state.step === 2) return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="vendor" data-onboarding-step="2"><div class="onboarding-section-head"><span class="account-badge">Step 2</span><h2>Your vendor business</h2><p>The creator receives the Vendor owner / administrator membership. Team members join later through scoped invitations.</p></div><div class="onboarding-field-grid"><label class="onboarding-field"><span>Legal business name *</span><input name="legalName" value="${escapeHtml(vendor.legalName)}" required></label><label class="onboarding-field"><span>Public or trading name *</span><input name="publicName" value="${escapeHtml(vendor.publicName)}" required></label><label class="onboarding-field"><span>Business email *</span><input name="businessEmail" type="email" value="${escapeHtml(vendor.businessEmail || state.identity.email)}" required></label><label class="onboarding-field"><span>Business phone *</span><input name="phone" type="tel" value="${escapeHtml(vendor.phone || state.identity.phone)}" required></label><label class="onboarding-field"><span>Primary service area *</span><input name="serviceArea" value="${escapeHtml(vendor.serviceArea)}" required></label><label class="onboarding-field"><span>Travel radius (km) *</span><input name="travelRadius" type="number" min="0" step="1" value="${escapeHtml(vendor.travelRadius)}" required></label><label class="onboarding-field"><span>City *</span><input name="city" value="${escapeHtml(vendor.city)}" required></label><label class="onboarding-field"><span>Website <small>optional</small></span><input name="website" type="url" value="${escapeHtml(vendor.website)}" placeholder="https://"></label></div>${onboardingButtons("vendor", state)}</form>`;
+  if (state.step === 3) {
+    const categories = Object.entries(serviceCategoryLabels).map(([id, label]) => `<label class="category-selection"><input type="checkbox" name="categories" value="${id}" ${vendor.categories.includes(id) ? "checked" : ""}><span><strong>${label}</strong><small>${offeringChoiceTemplates[id].slice(0, 3).join(" · ")}</small></span></label>`).join("");
+    return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="vendor" data-onboarding-step="3"><div class="onboarding-section-head"><span class="account-badge">Step 3</span><h2>Select any supported category you want to serve</h2><p>Choose one or several. This personalizes offering templates; it is not an approval request. You can add, remove, or change categories later.</p></div><fieldset class="category-selection-fieldset"><legend>Currently supported categories *</legend><div class="category-selection-grid">${categories}</div><small id="category-selection-error" class="field-error" role="alert" hidden>Select at least one service category.</small></fieldset><div class="readiness-note"><strong>No category gate in this prototype</strong><span>Selected means available for your setup—not requested, pending, or approved. Each offering still uses one primary category so organizers receive the correct choices.</span></div>${onboardingButtons("vendor", state)}</form>`;
+  }
+  const categoryOptions = vendor.categories.map(id => `<option value="${id}" ${vendor.primaryCategory === id ? "selected" : ""}>${serviceCategoryLabels[id]}</option>`).join("");
+  return `<form id="onboarding-form" class="onboarding-form" data-onboarding-type="vendor" data-onboarding-step="4"><div class="onboarding-section-head"><span class="account-badge">Step 4</span><h2>Seller readiness and first offering</h2><p>Drafts may be prepared now. Identity and payout readiness—not category approval—would be required before accepting live payment.</p></div><div class="onboarding-field-grid"><label class="onboarding-field"><span>GST/HST status *</span><select name="taxStatus" required><option value="not_registered" ${vendor.taxStatus === "not_registered" ? "selected" : ""}>Not registered / confirm with adviser</option><option value="registered" ${vendor.taxStatus === "registered" ? "selected" : ""}>Registered</option><option value="unsure" ${vendor.taxStatus === "unsure" ? "selected" : ""}>Not sure yet</option></select></label><label class="onboarding-field"><span>Invoice prefix *</span><input name="invoicePrefix" maxlength="6" pattern="[A-Za-z0-9-]{2,6}" value="${escapeHtml(vendor.invoicePrefix)}" placeholder="ABC" required></label><label class="onboarding-field"><span>First offering category *</span><select name="primaryCategory" required>${categoryOptions}</select></label><label class="onboarding-field"><span>First offering name *</span><input name="firstOfferingName" value="${escapeHtml(vendor.firstOfferingName)}" placeholder="Example: Family celebration buffet" required></label><label class="onboarding-field full"><span>Default cancellation and refund summary *</span><textarea name="cancellationSummary" rows="4" required>${escapeHtml(vendor.cancellationSummary)}</textarea></label><label class="onboarding-field"><span>Optional teammate email</span><input name="inviteEmail" type="email" value="${escapeHtml(vendor.inviteEmail)}"></label><label class="onboarding-field"><span>Optional teammate role</span><select name="inviteRole"><option value="fulfilment" ${vendor.inviteRole === "fulfilment" ? "selected" : ""}>Order / fulfilment staff</option><option value="finance" ${vendor.inviteRole === "finance" ? "selected" : ""}>Vendor finance</option><option value="admin" ${vendor.inviteRole === "admin" ? "selected" : ""}>Vendor owner / administrator</option></select></label></div><label class="onboarding-consent"><input name="payoutAcknowledged" type="checkbox" value="yes" ${vendor.payoutAcknowledged ? "checked" : ""} required><span><strong>Simulate seller and payout readiness</strong><small>No tax identifier, bank information, identity evidence, or invitation is collected or sent.</small></span></label>${onboardingButtons("vendor", state, "Finish vendor demo")}</form>`;
+}
+
+function onboardingCompletion(type, state) {
+  const definition = onboardingDefinitions[type];
+  const name = `${state.identity.firstName} ${state.identity.lastName}`.trim();
+  const common = `<li>✓ Email verified in this browser-only simulation</li><li>✓ ${escapeHtml(name || definition.label)} recorded as the initial account owner</li>`;
+  const details = type === "organizer"
+    ? `${common}<li>✓ Organizer account outline complete</li><li>${state.organizer.claimBooking === "yes" ? `✓ Secure claim simulated for ${escapeHtml(state.organizer.bookingReference)}` : "— No booking linked"}</li>`
+    : type === "operator"
+      ? `${common}<li>✓ ${escapeHtml(state.operator.publicName)} organization profile prepared</li><li>✓ ${escapeHtml(state.operator.spaceName)} listing outline prepared</li><li>✓ Availability, price, deposit, and payout-readiness choices recorded</li><li>— Production identity and bank payout connection still required</li>`
+      : `${common}<li>✓ ${escapeHtml(state.vendor.publicName)} business profile prepared</li><li>✓ ${state.vendor.categories.map(id => serviceCategoryLabels[id]).join(", ")} selected with no category approval gate</li><li>✓ First offering outline prepared</li><li>— Production identity and bank payout connection still required</li>`;
+  const primaryAction = type === "vendor"
+    ? '<button class="button button-green" type="button" data-open-first-offering>Continue to the representative offering builder</button>'
+    : `<button class="button button-green" type="button" data-preview-role="${definition.demoRoleId}" data-preview-route="${definition.demoRoute}">Open representative ${definition.label.toLowerCase()} workspace</button>`;
+  const accessState = type === "organizer" ? (state.organizer.claimBooking === "yes" ? "Secure claim simulated" : "No booking linked") : "Draft · not live";
+  const handoffBoundary = type === "vendor"
+    ? "The representative workspace is fictional. The offering-builder handoff copies only the first-offering name and category into an in-memory draft; nothing is submitted or published."
+    : "The representative workspace is fictional and does not use the information entered above.";
+  return `<div class="onboarding-complete"><span class="success-icon">✓</span><span class="eyebrow">${definition.label} onboarding · simulated</span><h2>Your setup outline is ready.</h2><p>Nothing was submitted or created. This completion summarizes what the production onboarding journey would collect before handing off to a real workspace.</p><ul>${details}</ul><div class="readiness-status"><div><span>Account</span><strong>Outline complete</strong></div><div><span>${type === "organizer" ? "Booking access" : type === "operator" ? "Listing" : "Marketplace"}</span><strong>${accessState}</strong></div><div><span>${type === "organizer" ? "Email" : "Payout"}</span><strong>${type === "organizer" ? "Not sent" : "Not connected"}</strong></div></div><div class="onboarding-actions">${primaryAction}<button class="button button-light" type="button" data-restart-onboarding="${type}">Restart this demo</button><button class="text-button" type="button" data-route="sign-in">Explore all demo roles</button></div><p class="sample-workspace-warning">${handoffBoundary}</p></div>`;
+}
+
+function onboardingPage(type) {
+  const definition = onboardingDefinitions[type];
+  const state = onboardingStates[type];
+  const stepBody = state.completed ? onboardingCompletion(type, state) : type === "organizer" ? organizerStep(state) : type === "operator" ? operatorStep(state) : vendorStep(state);
+  return `<section class="onboarding-page"><div class="onboarding-wrap"><button class="back-link" type="button" data-route="create-account">← All account types</button><header class="onboarding-hero"><div><span class="eyebrow">${definition.label} onboarding</span><h1>${definition.title}</h1><p>${type === "organizer" ? "Create an optional account for bookings, documents, changes, deposits, and reviews. Guest booking remains available." : type === "operator" ? "Create an organization, outline the first space, and review what is required before accepting bookings." : "Create a vendor business, choose any supported categories, and prepare the first configurable offering."}</p></div><span class="account-icon large" aria-hidden="true">${definition.icon}</span></header>${onboardingProgress(definition, state)}${onboardingBoundary()}<div class="onboarding-card">${stepBody}</div><aside class="onboarding-help"><strong>Need to review permissions instead?</strong><span>The demo-role selector remains separate from account creation.</span><button class="text-button" type="button" data-route="sign-in">Explore demo roles</button></aside></div></section>`;
 }
 
 function signInPage() {
@@ -2359,13 +2484,17 @@ function updateSessionChrome() {
   const role = activeRole();
   const sessionButton = document.querySelector("#session-button");
   const signOutButton = document.querySelector("#sign-out-button");
+  const createAccountButton = document.querySelector("#create-account-button");
+  const mobileSignIn = document.querySelector("#mobile-signin-nav");
   const workspaceNav = document.querySelector("#workspace-nav");
   const footerWorkspace = document.querySelector("#footer-workspace");
   const sessionContext = document.querySelector("#session-context");
   if (!role) {
-    sessionButton.textContent = "Demo sign in";
-    sessionButton.dataset.route = "sign-in";
+    sessionButton.textContent = "Sign in";
+    sessionButton.dataset.route = "login";
     signOutButton.hidden = true;
+    createAccountButton.hidden = false;
+    mobileSignIn.hidden = false;
     workspaceNav.textContent = "Demo accounts";
     workspaceNav.dataset.route = "sign-in";
     footerWorkspace.textContent = "Demo accounts";
@@ -2378,6 +2507,8 @@ function updateSessionChrome() {
   sessionButton.textContent = `${role.initials} · ${role.shortRole}`;
   sessionButton.dataset.route = "role-home";
   signOutButton.hidden = false;
+  createAccountButton.hidden = true;
+  mobileSignIn.hidden = true;
   workspaceNav.textContent = "My demo workspace";
   workspaceNav.dataset.route = role.landing;
   footerWorkspace.textContent = "My demo workspace";
@@ -2423,6 +2554,11 @@ function render(route = location.hash.slice(1) || "home") {
     "platform-dashboard": platformDashboardPage,
     "venue-terms": venueTermsPage,
     "role-home": roleHomePage,
+    login: loginPage,
+    "create-account": createAccountPage,
+    "signup-organizer": () => onboardingPage("organizer"),
+    "signup-operator": () => onboardingPage("operator"),
+    "signup-vendor": () => onboardingPage("vendor"),
     "sign-in": signInPage,
     host: hostPage
   };
@@ -2453,12 +2589,19 @@ function render(route = location.hash.slice(1) || "home") {
     "platform-dashboard": "Platform console",
     "venue-terms": "Venue commercial terms",
     "role-home": "Role and permissions",
+    login: "Sign in",
+    "create-account": "Create account",
+    "signup-organizer": "Organizer signup",
+    "signup-operator": "Space-operator onboarding",
+    "signup-vendor": "Vendor onboarding",
     "sign-in": "Choose a demo account",
     host: "For space operators"
   };
   const resolvedRoute = routes[route] ? route : "home";
   const permitted = canAccessRoute(resolvedRoute);
-  app.innerHTML = permitted ? routes[resolvedRoute]() : accessRestrictedPage(resolvedRoute);
+  let pageMarkup = permitted ? routes[resolvedRoute]() : accessRestrictedPage(resolvedRoute);
+  if (permitted && resolvedRoute === "host") pageMarkup = pageMarkup.replace('<button class="button button-dark" data-route="sign-in">Explore operator demo roles →</button>', '<button class="button button-dark" data-route="signup-operator">Start operator setup →</button>');
+  app.innerHTML = pageMarkup;
   document.title = `${permitted ? titles[resolvedRoute] : "Access restricted"} — Gather`;
   updateSessionChrome();
   window.scrollTo({ top: 0 });
@@ -2484,6 +2627,104 @@ function closeMobileMenu() {
   menu.setAttribute("aria-label", "Open menu");
 }
 
+function captureOnboardingForm(type, step, form) {
+  if (!form) return;
+  const values = new FormData(form);
+  const read = name => String(values.get(name) || "").trim();
+  const state = onboardingStates[type];
+  if (step === 1) {
+    state.identity = { ...state.identity, firstName: read("firstName"), lastName: read("lastName"), email: read("email"), phone: read("phone"), consent: values.has("consent") };
+    return;
+  }
+  if (type === "organizer") {
+    if (step === 2) state.identity.verificationCode = read("verificationCode");
+    if (step === 3) state.organizer = { claimBooking: read("claimBooking") || "no", bookingReference: read("bookingReference").toUpperCase() };
+    return;
+  }
+  if (type === "operator") {
+    if (step === 2) Object.assign(state.operator, { legalName: read("legalName"), publicName: read("publicName"), organizationType: read("organizationType"), organizationEmail: read("organizationEmail"), address: read("address"), city: read("city"), province: read("province"), postalCode: read("postalCode"), website: read("website") });
+    if (step === 3) Object.assign(state.operator, { siteName: read("siteName"), spaceName: read("spaceName"), spaceType: read("spaceType"), capacity: read("capacity"), description: read("description") });
+    if (step === 4) Object.assign(state.operator, { weekdays: values.getAll("weekdays").map(String), openTime: read("openTime"), closeTime: read("closeTime"), closesNextDay: values.has("closesNextDay"), hourlyRate: read("hourlyRate"), depositAmount: read("depositAmount"), minimumNotice: read("minimumNotice"), inviteEmail: read("inviteEmail"), inviteRole: read("inviteRole"), calendarMode: read("calendarMode"), payoutAcknowledged: values.has("payoutAcknowledged") });
+    return;
+  }
+  if (step === 2) Object.assign(state.vendor, { legalName: read("legalName"), publicName: read("publicName"), businessEmail: read("businessEmail"), phone: read("phone"), serviceArea: read("serviceArea"), travelRadius: read("travelRadius"), city: read("city"), website: read("website") });
+  if (step === 3) {
+    state.vendor.categories = values.getAll("categories").map(String);
+    if (!state.vendor.categories.includes(state.vendor.primaryCategory)) state.vendor.primaryCategory = state.vendor.categories[0] || "";
+  }
+  if (step === 4) Object.assign(state.vendor, { taxStatus: read("taxStatus"), invoicePrefix: read("invoicePrefix").toUpperCase(), primaryCategory: read("primaryCategory"), firstOfferingName: read("firstOfferingName"), cancellationSummary: read("cancellationSummary"), inviteEmail: read("inviteEmail"), inviteRole: read("inviteRole"), payoutAcknowledged: values.has("payoutAcknowledged") });
+}
+
+function onboardingFormIsValid(type, step, form) {
+  form.querySelectorAll("input,select,textarea").forEach(control => { control.setCustomValidity(""); control.removeAttribute("aria-invalid"); });
+  form.querySelectorAll(".field-error").forEach(error => { error.hidden = true; });
+  const emptyRequired = [...form.querySelectorAll("input[required]:not([type='checkbox']):not([type='radio']),textarea[required]")].find(control => !control.value.trim());
+  if (emptyRequired) {
+    emptyRequired.setCustomValidity("Complete this required field.");
+    emptyRequired.setAttribute("aria-invalid", "true");
+  }
+  if (!form.reportValidity()) return false;
+  if (type === "organizer" && step === 2) {
+    const code = form.elements.verificationCode;
+    const error = form.querySelector("#verification-error");
+    if (code.value !== "246810") {
+      code.setAttribute("aria-invalid", "true");
+      error.hidden = false;
+      code.focus();
+      return false;
+    }
+  }
+  if (type === "organizer" && step === 3 && new FormData(form).get("claimBooking") === "yes") {
+    const reference = form.elements.bookingReference;
+    const expectedReference = confirmedBookingSnapshot?.bookingId || "BKG-1048";
+    const expectedEmail = confirmedBookingSnapshot?.booking.email || bookingData.email;
+    if (onboardingStates.organizer.identity.email.trim().toLowerCase() !== expectedEmail.trim().toLowerCase()) {
+      form.querySelector("#booking-email-error").hidden = false;
+      form.querySelector("[data-onboarding-back]").focus();
+      return false;
+    }
+    if (reference.value.trim().toUpperCase() !== expectedReference.toUpperCase()) {
+      reference.setAttribute("aria-invalid", "true");
+      form.querySelector("#booking-reference-error").hidden = false;
+      reference.focus();
+      return false;
+    }
+  }
+  if (type === "operator" && step === 4) {
+    const days = [...form.querySelectorAll('[name="weekdays"]:checked')];
+    const dayError = form.querySelector("#weekday-error");
+    if (!days.length) {
+      dayError.hidden = false;
+      const firstDay = form.querySelector('[name="weekdays"]');
+      firstDay.setAttribute("aria-invalid", "true");
+      firstDay.focus();
+      return false;
+    }
+    const open = form.elements.openTime;
+    const close = form.elements.closeTime;
+    const closesNextDay = form.elements.closesNextDay.checked;
+    if (close.value <= open.value && !closesNextDay) {
+      const timeError = form.querySelector("#time-error");
+      timeError.hidden = false;
+      close.setAttribute("aria-invalid", "true");
+      close.focus();
+      return false;
+    }
+  }
+  if (type === "vendor" && step === 3) {
+    const categories = [...form.querySelectorAll('[name="categories"]:checked')];
+    if (!categories.length) {
+      const error = form.querySelector("#category-selection-error");
+      error.hidden = false;
+      const first = form.querySelector('[name="categories"]');
+      first.setAttribute("aria-invalid", "true");
+      first.focus();
+      return false;
+    }
+  }
+  return true;
+}
+
 function navigate(route) {
   closeMobileMenu();
   if (location.hash === `#${route}`) render(route);
@@ -2496,6 +2737,89 @@ function bindPageEvents() {
   app.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => navigate(el.dataset.route)));
   app.querySelectorAll("[data-demo-role]").forEach(button => button.addEventListener("click", () => setActiveRole(button.dataset.demoRole)));
   app.querySelectorAll("[data-sign-out]").forEach(button => button.addEventListener("click", signOut));
+  app.querySelector("#prototype-signin-form")?.addEventListener("submit", event => {
+    event.preventDefault();
+    if (!event.currentTarget.reportValidity()) return;
+    simulatedSignInEmail = String(new FormData(event.currentTarget).get("email") || "").trim();
+    render("login");
+    showToast("Prototype sign-in link simulated. No email was sent.");
+  });
+  app.querySelectorAll("[data-start-onboarding]").forEach(button => button.addEventListener("click", () => {
+    const type = button.dataset.startOnboarding;
+    const definition = onboardingDefinitions[type];
+    if (!definition) return;
+    let state = onboardingStates[type];
+    if (button.dataset.claimBooking === "true") {
+      state = newOnboardingState("organizer");
+      onboardingStates.organizer = state;
+      const contactParts = (confirmedBookingSnapshot?.booking.contact || bookingData.contact || "").trim().split(/\s+/);
+      state.identity.firstName = contactParts.shift() || "";
+      state.identity.lastName = contactParts.join(" ");
+      state.identity.email = confirmedBookingSnapshot?.booking.email || bookingData.email || "";
+      state.organizer.claimBooking = "yes";
+      state.organizer.bookingReference = confirmedBookingSnapshot?.bookingId || state.organizer.bookingReference;
+    }
+    navigate(definition.route);
+  }));
+  app.querySelector("#onboarding-form")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const type = form.dataset.onboardingType;
+    const step = Number(form.dataset.onboardingStep);
+    if (!onboardingFormIsValid(type, step, form)) return;
+    captureOnboardingForm(type, step, form);
+    const state = onboardingStates[type];
+    if (step === 1 && type !== "organizer") state.identity.emailVerified = true;
+    if (type === "organizer" && step === 2) state.identity.emailVerified = true;
+    const lastStep = onboardingDefinitions[type].steps.length;
+    if (step >= lastStep) state.completed = true;
+    else state.step = step + 1;
+    render(onboardingDefinitions[type].route);
+    showToast(state.completed ? `${onboardingDefinitions[type].label} onboarding demo completed. Nothing was submitted.` : `Step ${state.step} of ${lastStep}`);
+  });
+  const claimBookingControls = [...app.querySelectorAll('[name="claimBooking"]')];
+  const syncClaimPanel = () => {
+    if (!claimBookingControls.length) return;
+    const shouldClaim = claimBookingControls.find(control => control.checked)?.value === "yes";
+    const panel = app.querySelector(".claim-preview");
+    const reference = panel?.querySelector('[name="bookingReference"]');
+    if (panel) panel.hidden = !shouldClaim;
+    if (reference) { reference.disabled = !shouldClaim; reference.required = shouldClaim; }
+  };
+  claimBookingControls.forEach(control => control.addEventListener("change", syncClaimPanel));
+  syncClaimPanel();
+  app.querySelector("[data-onboarding-back]")?.addEventListener("click", () => {
+    const form = app.querySelector("#onboarding-form");
+    const type = form?.dataset.onboardingType;
+    if (!type) return;
+    captureOnboardingForm(type, Number(form.dataset.onboardingStep), form);
+    onboardingStates[type].step = Math.max(1, onboardingStates[type].step - 1);
+    render(onboardingDefinitions[type].route);
+  });
+  app.querySelectorAll("[data-restart-onboarding]").forEach(button => button.addEventListener("click", () => {
+    const type = button.dataset.restartOnboarding;
+    onboardingStates[type] = newOnboardingState(type);
+    render(onboardingDefinitions[type].route);
+    showToast(`${onboardingDefinitions[type].label} onboarding demo restarted.`);
+  }));
+  app.querySelectorAll("[data-preview-role]").forEach(button => button.addEventListener("click", () => {
+    const roleId = button.dataset.previewRole;
+    const route = button.dataset.previewRoute;
+    setActiveRole(roleId);
+    requestAnimationFrame(() => navigate(route));
+  }));
+  app.querySelector("[data-open-first-offering]")?.addEventListener("click", () => {
+    const state = onboardingStates.vendor;
+    const serviceType = state.vendor.primaryCategory || state.vendor.categories[0] || "catering";
+    const draft = blankOfferingDraft();
+    draft.name = state.vendor.firstOfferingName || `New ${serviceCategoryLabels[serviceType]} offering`;
+    draft.serviceType = serviceType;
+    draft.optionGroups = vendorOptionGroupsTemplate(serviceType, true);
+    draft.customRequestsAllowed = ["catering", "cake", "decor", "photo-booth"].includes(serviceType);
+    vendorOfferingEditor = { editingId: null, status: "draft", image: null, imageError: "", savedAt: null, draft };
+    setActiveRole("vendor-admin");
+    requestAnimationFrame(() => navigate("vendor-offerings"));
+  });
   const revokePreview = preview => {
     if (!preview?.previewUrl?.startsWith("blob:")) return;
     if (vendorServices.some(service => service.imagePreviewUrl === preview.previewUrl)) return;
