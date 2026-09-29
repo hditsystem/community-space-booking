@@ -147,6 +147,16 @@ let depositClaimReason = "Additional cleaning";
 let depositClaimEvidence = "Timestamped post-event photos and supporting record attached (prototype).";
 let closeoutFinalized = false;
 let confirmedBookingSnapshot = null;
+let eventWorkspaceState = {
+  bookingId: null,
+  requirementOverrides: {},
+  selectedMessageThread: "venue",
+  messageDrafts: {},
+  messages: [],
+  actionView: null,
+  changeDraft: null,
+  submittedRequest: null
+};
 let bookingSequence = 1048;
 let policyRevision = 1;
 let feePolicy = {
@@ -223,7 +233,7 @@ const demoRoles = [
     permissionKeys: ["customer.booking.manage", "customer.documents.view", "customer.deposit.respond", "customer.reviews.create", "customer.messages"],
     permissions: ["Search and complete Instant Book checkout", "View customer invoices, receipts, statements, and deposit status", "Request permitted changes or cancellation", "Review each completed venue and fulfilled vendor order", "Respond to a documented deposit claim"],
     restrictions: ["Cannot see venue or vendor private payouts", "Cannot change availability, commercial policy, or supplier records"],
-    routes: ["customer-dashboard", "customer-documents", "customer-deposit", "customer-reviews", "interim-statement", "final-statement"]
+    routes: ["customer-dashboard", "customer-event", "customer-documents", "customer-deposit", "customer-reviews", "interim-statement", "final-statement"]
   },
   {
     id: "venue-admin", accountType: "venue", role: "Owner / account administrator", shortRole: "Venue admin", name: "Jamie Morales", initials: "JM", organization: "Ridgeview Community Association", landing: "dashboard", workspaceLabel: "Open venue dashboard",
@@ -334,6 +344,7 @@ const routeLabels = {
   booking: "Instant Book checkout",
   "booking-documents": "Checkout booking documents",
   "customer-dashboard": "My bookings",
+  "customer-event": "My Event",
   "customer-documents": "Customer booking documents",
   "customer-deposit": "Customer deposit response",
   "customer-reviews": "Organizer reviews",
@@ -982,7 +993,10 @@ function reviewForm() {
 function successPage() {
   const snapshot = confirmedBookingSnapshot || createBookingSnapshot();
   const vendorCount = snapshot.vendors.length;
-  return `<div class="success-card"><div class="success-icon">✓</div><span class="eyebrow">Demo booking · ${snapshot.bookingId}</span><h1>Payment received. Booking confirmed.</h1><span class="status-pill confirmed">Confirmed</span><p>${snapshot.space.name} would be reserved for ${new Date(snapshot.booking.date + "T12:00:00").toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" })} from ${formatTime(snapshot.booking.start)} to ${formatTime(snapshot.booking.end)}</p><p><strong>Demo total:</strong> ${money(snapshot.totals.dueNow)} CAD${snapshot.totals.deposit ? `, including the separate ${money(snapshot.totals.deposit)} refundable security deposit` : ""}.</p><div class="confirmation-docs"><strong>Documents available now</strong><span>✓ Venue supplier invoice</span>${vendorCount ? `<span>✓ ${vendorCount} vendor supplier invoice${vendorCount === 1 ? "" : "s"}</span>` : ""}<span>✓ Payment receipt</span>${snapshot.totals.deposit ? "<span>✓ Security-deposit record</span>" : ""}</div><p>Your Final Booking Statement would be created after the event, when supplier fulfilment, adjustments, and the deposit outcome are resolved.</p><p><strong>Prototype only:</strong> no charge, email, or real reservation was created.</p><div class="button-row"><button class="button button-green" data-route="booking-documents">View booking documents</button><button class="button button-light" data-route="home">Browse more spaces</button></div></div>`;
+  const manageAction = activeRole()?.accountType === "customer"
+    ? '<button class="button button-green" data-route="customer-event">Manage My Event</button>'
+    : '<button class="button button-green" data-route="sign-in">Sign in to manage My Event</button>';
+  return `<div class="success-card"><div class="success-icon">✓</div><span class="eyebrow">Demo booking · ${snapshot.bookingId}</span><h1>Payment received. Booking confirmed.</h1><span class="status-pill confirmed">Venue and selected services confirmed</span><p>${snapshot.space.name} would be reserved for ${new Date(snapshot.booking.date + "T12:00:00").toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" })} from ${formatTime(snapshot.booking.start)} to ${formatTime(snapshot.booking.end)}</p><p><strong>Demo total:</strong> ${money(snapshot.totals.dueNow)} CAD${snapshot.totals.deposit ? `, including the separate ${money(snapshot.totals.deposit)} refundable security deposit` : ""}.</p><div class="confirmation-docs"><strong>Documents available now</strong><span>✓ Venue supplier invoice</span>${vendorCount ? `<span>✓ ${vendorCount} vendor supplier invoice${vendorCount === 1 ? "" : "s"}</span>` : ""}<span>✓ Payment receipt</span>${snapshot.totals.deposit ? "<span>✓ Security-deposit record</span>" : ""}</div><p>Use My Event for supplier-specific status, requirements, messages, the day-of schedule, access release, and change or cancellation impact previews.</p><p><strong>Prototype only:</strong> no charge, email, message, or real reservation was created.</p><div class="button-row">${manageAction}<button class="button button-light" data-route="booking-documents">View booking documents</button><button class="button button-light" data-route="home">Browse more spaces</button></div></div>`;
 }
 
 function vendorInvoiceDocument(item, snapshot) {
@@ -1070,16 +1084,384 @@ function customerDepositCard() {
   return `<article class="customer-deposit-card"><div><span class="account-badge">No action required</span><h2>Security-deposit status</h2><p>A response becomes available only after the venue submits an itemized claim with evidence. Customers cannot create or alter the venue’s claim.</p></div><button class="button button-light" data-route="customer-deposit">View deposit record</button></article>`;
 }
 
+function managedEventDate(date) {
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+}
+
+function managedEventShortDate(date) {
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function sampleManagedEvent() {
+  return {
+    source: "sample",
+    bookingId: "BKG-1048",
+    reference: 1048,
+    purpose: "Birthday or family celebration",
+    date: "2026-10-17",
+    start: "18:00",
+    end: "23:00",
+    guests: 60,
+    capacity: 120,
+    owner: activeRole()?.name || "Priya Shah",
+    address: "100 Ridgeview Way NW, Calgary, AB · fictional prototype address",
+    venue: {
+      name: "Ridgeview Community Hall",
+      supplier: "Ridgeview Community Association",
+      orderId: "BKG-1048",
+      invoiceId: "INV-RCA-1048",
+      status: "Confirmed",
+      statusClass: "confirmed",
+      hourlyRate: 48,
+      rental: 240,
+      addons: [{ name: "Kitchen access", price: 45 }],
+      addonTotal: 45,
+      tax: 14.25,
+      total: 299.25,
+      cancellationPolicy: "Full venue-rental refund through October 10; later requests require venue review. Issued invoices are preserved and any approved adjustment uses a credit or supplemental invoice."
+    },
+    vendors: [
+      {
+        threadId: "vendor-decor",
+        orderId: "ORD-BDE-1048",
+        invoiceId: "INV-BDE-1048",
+        supplier: "Bright Day Events",
+        offering: "Celebration décor package",
+        category: "Decorations",
+        status: "Confirmed",
+        statusClass: "confirmed",
+        serviceWindow: "6:00–10:30 p.m.",
+        price: 285,
+        tax: 14.25,
+        total: 299.25,
+        pricing: { type: "flat", amount: 285 },
+        cancellationPolicy: "Full refund until 7 days before service; 50% from 3–6 days; non-refundable inside 72 hours."
+      },
+      {
+        threadId: "vendor-magic",
+        orderId: "ORD-WSE-1048",
+        invoiceId: "INV-WSE-1048",
+        supplier: "WonderSpark Entertainment",
+        offering: "Family magic show",
+        category: "Entertainment",
+        status: "Details required",
+        statusClass: "attention",
+        serviceWindow: "Proposed show · 7:15–8:15 p.m.",
+        price: 350,
+        tax: 17.5,
+        total: 367.5,
+        pricing: { type: "flat", amount: 350 },
+        cancellationPolicy: "Full refund until 7 days before service; 50% from 3–6 days; non-refundable inside 72 hours."
+      }
+    ],
+    totals: { servicesTotal: 966, deposit: 300, dueNow: 1266 },
+    receiptId: "RCT-1048",
+    alcoholRequired: false
+  };
+}
+
+function snapshotManagedEvent(snapshot) {
+  const venueAddons = snapshot.addons || [];
+  return {
+    source: "checkout",
+    bookingId: snapshot.bookingId,
+    reference: snapshot.reference,
+    purpose: snapshot.booking.event || eventPurposes.find(item => item.id === snapshot.booking.purposeId)?.label || "Private event",
+    date: snapshot.booking.date,
+    start: snapshot.booking.start,
+    end: snapshot.booking.end,
+    guests: snapshot.booking.guests,
+    capacity: snapshot.space.capacity,
+    owner: snapshot.booking.contact,
+    address: `${snapshot.space.name} · ${snapshot.space.area} · address shown in the accepted venue instructions`,
+    venue: {
+      name: snapshot.space.name,
+      supplier: snapshot.space.operator,
+      orderId: snapshot.bookingId,
+      invoiceId: snapshot.venueInvoiceNumber,
+      status: "Confirmed",
+      statusClass: "confirmed",
+      hourlyRate: snapshot.space.price,
+      rental: snapshot.totals.rental,
+      addons: venueAddons,
+      addonTotal: snapshot.totals.addons,
+      tax: snapshot.totals.venueTax,
+      total: snapshot.totals.venueSubtotal + snapshot.totals.venueTax,
+      cancellationPolicy: "The accepted venue policy applies supplier-by-supplier. Availability, price, tax, requirements, and deposit treatment are rechecked before any change is accepted."
+    },
+    vendors: snapshot.vendors.map((item, index) => ({
+      threadId: `vendor-${item.id || index}`,
+      orderId: `ORD-${item.invoicePrefix}-${snapshot.reference}`,
+      invoiceId: `INV-${item.invoicePrefix}-${snapshot.reference}`,
+      supplier: item.vendor,
+      offering: item.name,
+      category: item.category,
+      status: "Confirmed",
+      statusClass: "confirmed",
+      serviceWindow: `${item.serviceWindow?.start || formatTime(snapshot.booking.start)}–${item.serviceWindow?.end || formatTime(snapshot.booking.end)}`,
+      price: item.price,
+      tax: taxFor(item.price, item.taxProfile),
+      total: item.price + taxFor(item.price, item.taxProfile),
+      pricing: item.pricing,
+      cancellationPolicy: item.cancellationPolicy
+    })),
+    totals: { ...snapshot.totals },
+    receiptId: snapshot.receiptNumber,
+    alcoholRequired: Boolean(snapshot.booking.eventNeeds?.alcohol)
+  };
+}
+
+function activeManagedEvent() {
+  return confirmedBookingSnapshot ? snapshotManagedEvent(confirmedBookingSnapshot) : sampleManagedEvent();
+}
+
+function createEventMessages(event) {
+  const messages = [{
+    id: "MSG-VENUE-1",
+    threadId: "venue",
+    sender: event.venue.supplier,
+    role: "Venue booking",
+    time: "Sep 28 · 10:15 a.m.",
+    body: "Your venue time is confirmed. Please complete the insurance requirement so we can release the final access instructions.",
+    delivery: "Received"
+  }];
+  event.vendors.forEach((vendor, index) => messages.push({
+    id: `MSG-VENDOR-${index + 1}`,
+    threadId: vendor.threadId,
+    sender: vendor.supplier,
+    role: `${vendor.category} order · ${vendor.orderId}`,
+    time: index ? "Sep 29 · 8:40 a.m." : "Sep 28 · 2:05 p.m.",
+    body: index ? "Please confirm whether the proposed performance time works with your event schedule." : "Our team has the venue window and will coordinate delivery within your booked access time.",
+    delivery: "Received"
+  }));
+  return messages;
+}
+
+function defaultEventChangeDraft(event) {
+  const nextDate = new Date(`${event.date}T12:00:00`);
+  nextDate.setDate(nextDate.getDate() + 7);
+  return { date: nextDate.toISOString().slice(0, 10), start: event.start, end: event.end, guests: event.guests, reason: "" };
+}
+
+function ensureEventWorkspaceState(event) {
+  if (eventWorkspaceState.bookingId !== event.bookingId) {
+    eventWorkspaceState = {
+      bookingId: event.bookingId,
+      requirementOverrides: {},
+      selectedMessageThread: "venue",
+      messageDrafts: {},
+      messages: createEventMessages(event),
+      actionView: null,
+      changeDraft: defaultEventChangeDraft(event),
+      submittedRequest: null
+    };
+  }
+  return eventWorkspaceState;
+}
+
+function resetEventWorkspaceState() {
+  eventWorkspaceState = { bookingId: null, requirementOverrides: {}, selectedMessageThread: "venue", messageDrafts: {}, messages: [], actionView: null, changeDraft: null, submittedRequest: null };
+}
+
+function eventRequirementDueDate(event, daysBefore) {
+  const date = new Date(`${event.date}T12:00:00`);
+  date.setDate(date.getDate() - daysBefore);
+  return managedEventShortDate(date.toISOString().slice(0, 10));
+}
+
+function eventRequirements(event) {
+  const requirements = [
+    { id: "venue-rules", title: "Venue rules and booking terms", status: "Accepted", statusClass: "confirmed", source: "Venue policy", owner: "Organizer", due: "Accepted at checkout", consequence: "Saved with the confirmed booking snapshot.", action: null },
+    { id: "insurance", title: "Event liability insurance certificate", status: "Action required", statusClass: "attention", source: "Venue policy", owner: "Organizer", due: eventRequirementDueDate(event, 7), consequence: "Final door instructions remain locked until the venue accepts the document.", action: "Attach demo certificate" },
+    { id: "headcount", title: "Confirm final attendee count", status: "Action required", statusClass: "pending", source: "Venue and supplier planning", owner: "Organizer", due: eventRequirementDueDate(event, 5), consequence: "Suppliers use the final count for setup and service planning.", action: "Confirm demo count" },
+    { id: "liquor", title: "Liquor licence and service evidence", status: event.alcoholRequired ? "Action required" : "Not required", statusClass: event.alcoholRequired ? "attention" : "neutral", source: "Venue and regulatory requirement", owner: event.alcoholRequired ? "Organizer" : "Not applicable", due: event.alcoholRequired ? eventRequirementDueDate(event, 10) : "No alcohol selected", consequence: event.alcoholRequired ? "Alcohol service is not permitted until the venue accepts the required evidence." : "This booking does not include alcohol service.", action: event.alcoholRequired ? "Add demo evidence" : null }
+  ];
+  return requirements.map(item => eventWorkspaceState.requirementOverrides[item.id] ? { ...item, ...eventWorkspaceState.requirementOverrides[item.id] } : item);
+}
+
+function eventMessageThreads(event) {
+  return [
+    { id: "venue", label: "Venue", recipient: event.venue.supplier, reference: event.bookingId },
+    ...event.vendors.map(vendor => ({ id: vendor.threadId, label: vendor.category, recipient: vendor.supplier, reference: vendor.orderId }))
+  ];
+}
+
+function eventTimeOffset(start, end, minutesFromStart, minutesBeforeEnd = 0) {
+  const startMinutes = Math.round(timeAsHours(start) * 60);
+  const endMinutes = Math.round(timeAsHours(end) * 60);
+  const targetMinutes = Math.min(startMinutes + minutesFromStart, Math.max(startMinutes, endMinutes - minutesBeforeEnd));
+  const hours = String(Math.floor(targetMinutes / 60)).padStart(2, "0");
+  const minutes = String(targetMinutes % 60).padStart(2, "0");
+  return formatTime(`${hours}:${minutes}`);
+}
+
+function eventTimeBeforeEnd(end, minutesBeforeEnd) {
+  const targetMinutes = Math.max(0, Math.round(timeAsHours(end) * 60) - minutesBeforeEnd);
+  const hours = String(Math.floor(targetMinutes / 60)).padStart(2, "0");
+  const minutes = String(targetMinutes % 60).padStart(2, "0");
+  return formatTime(`${hours}:${minutes}`);
+}
+
+function eventSchedule(event) {
+  const startLabel = formatTime(event.start);
+  const endLabel = formatTime(event.end);
+  const vendorEntries = event.vendors.map((vendor, index) => ({
+    time: eventTimeOffset(event.start, event.end, 10 + index * 20, 45),
+    title: `${vendor.supplier} · ${vendor.offering}`,
+    detail: index ? "Supplier arrival and service preparation inside the venue booking window." : "Delivery and setup inside the venue booking window.",
+    type: "Vendor order"
+  }));
+  return [
+    { time: startLabel, title: "Venue access and organizer setup", detail: "The booked time includes setup; entry is not available before this time.", type: "Venue" },
+    ...vendorEntries,
+    { time: eventTimeOffset(event.start, event.end, 45, 45), title: "Guest arrival", detail: "Organizer-managed event begins after initial setup.", type: "Organizer" },
+    { time: eventTimeBeforeEnd(event.end, 45), title: "Cleanup and supplier teardown", detail: "All cleanup and teardown must remain inside the booked time.", type: "Shared" },
+    { time: endLabel, title: "Vacate venue and return access items", detail: "Organizer confirms the hall is secured; post-event inspection follows.", type: "Venue" }
+  ];
+}
+
+function eventChangeImpact(event, draft) {
+  const hours = Math.max(0, timeAsHours(draft.end) - timeAsHours(draft.start));
+  const proposedRental = hours * event.venue.hourlyRate;
+  const proposedVenueSubtotal = proposedRental + event.venue.addonTotal;
+  const proposedVenueTax = Math.round(proposedVenueSubtotal * 0.05 * 100) / 100;
+  const proposedVenueTotal = proposedVenueSubtotal + proposedVenueTax;
+  const vendorRows = event.vendors.map(vendor => {
+    const proposedPrice = vendor.pricing?.type === "per_person"
+      ? Math.max(vendor.pricing.minimum || 0, (vendor.pricing.amount || 0) * Number(draft.guests))
+      : vendor.price;
+    const proposedTax = Math.round(proposedPrice * 0.05 * 100) / 100;
+    return { ...vendor, proposedPrice, proposedTax, proposedTotal: proposedPrice + proposedTax, difference: proposedPrice + proposedTax - vendor.total };
+  });
+  const currentVendorTotal = event.vendors.reduce((sum, vendor) => sum + vendor.total, 0);
+  const proposedVendorTotal = vendorRows.reduce((sum, vendor) => sum + vendor.proposedTotal, 0);
+  return {
+    proposedRental,
+    proposedVenueTax,
+    proposedVenueTotal,
+    venueDifference: proposedVenueTotal - event.venue.total,
+    vendorRows,
+    totalDifference: proposedVenueTotal + proposedVendorTotal - event.venue.total - currentVendorTotal
+  };
+}
+
+function eventDocumentButton(event, label = "View booking documents") {
+  return event.source === "checkout"
+    ? `<button class="button button-light" type="button" data-route="booking-documents">${label}</button>`
+    : `<button class="button button-light" type="button" data-document="Sample booking documents opened; no real file was downloaded.">${label}</button>`;
+}
+
+function eventStatusPill(status, statusClass = "") {
+  return `<span class="event-status ${statusClass}"><span aria-hidden="true">${statusClass === "confirmed" ? "✓" : statusClass === "attention" ? "!" : statusClass === "pending" ? "◷" : "•"}</span>${escapeHtml(status)}</span>`;
+}
+
+function eventNextAction(event, requirements) {
+  const requirement = requirements.find(item => ["Action required", "Due soon"].includes(item.status));
+  if (requirement) return {
+    eyebrow: `${requirement.source} · due ${requirement.due}`,
+    title: requirement.title,
+    detail: requirement.consequence,
+    section: "event-requirements",
+    action: requirement.action || "Review requirement"
+  };
+  const vendor = event.vendors.find(item => item.statusClass === "attention");
+  if (vendor) return { eyebrow: `${vendor.category} order · ${vendor.orderId}`, title: `Reply to ${vendor.supplier}`, detail: `${vendor.offering} needs an operational detail before the event.`, section: "event-messages", action: "Open supplier thread", threadId: vendor.threadId };
+  return { eyebrow: "Event preparation", title: "Review the day-of schedule", detail: "Your required organizer actions are complete. Confirm arrival, setup, cleanup, and access timing before event day.", section: "event-schedule", action: "View schedule" };
+}
+
+function eventOrderCard(order, type, event) {
+  const isVenue = type === "venue";
+  const reference = isVenue ? event.bookingId : order.orderId;
+  const messageThread = isVenue ? "venue" : order.threadId;
+  const supplierLabel = isVenue ? "Venue booking" : `Independent ${order.category.toLowerCase()} order`;
+  const title = isVenue ? order.name : order.offering;
+  const serviceWindow = isVenue ? `${managedEventDate(event.date)} · ${formatTime(event.start)}–${formatTime(event.end)} Mountain Time` : `${managedEventDate(event.date)} · ${order.serviceWindow}`;
+  return `<article class="event-order-card"><div class="event-order-head"><div><span class="vendor-category">${supplierLabel}</span><h3>${escapeHtml(title)}</h3><p>${escapeHtml(order.supplier)} · ${escapeHtml(reference)}</p></div>${eventStatusPill(order.status, order.statusClass)}</div><dl class="event-order-facts"><div><dt>Service window</dt><dd>${escapeHtml(serviceWindow)}</dd></div><div><dt>Supplier total</dt><dd>${moneyExact(order.total)}</dd></div><div><dt>Invoice</dt><dd>${escapeHtml(order.invoiceId)}</dd></div></dl><p class="event-order-policy"><strong>Changes and cancellation:</strong> ${escapeHtml(order.cancellationPolicy)}</p><div class="event-card-actions"><button class="button button-light" type="button" data-event-message-thread="${escapeHtml(messageThread)}">Message ${isVenue ? "venue" : "supplier"}</button>${eventDocumentButton(event, `View ${isVenue ? "venue" : "supplier"} invoice`)}</div></article>`;
+}
+
+function eventRequirementsSection(event, requirements) {
+  return `<section class="event-section" id="event-requirements" aria-labelledby="event-requirements-title"><div class="event-section-head"><div><span class="eyebrow">Before event day</span><h2 id="event-requirements-title" tabindex="-1">Requirements and documents</h2><p>Required evidence is separate from optional services. Each item shows who requested it, who owns it, and what happens if it remains incomplete.</p></div>${eventDocumentButton(event)}</div><div class="event-requirement-list">${requirements.map(item => `<article class="event-requirement-row"><div class="event-requirement-main">${eventStatusPill(item.status, item.statusClass)}<div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.consequence)}</p></div></div><dl><div><dt>Source</dt><dd>${escapeHtml(item.source)}</dd></div><div><dt>Responsible</dt><dd>${escapeHtml(item.owner)}</dd></div><div><dt>Due</dt><dd>${escapeHtml(item.due)}</dd></div></dl>${item.action ? `<button class="button button-light" type="button" data-event-requirement="${item.id}">${escapeHtml(item.action)}</button>` : ""}</article>`).join("")}</div><p class="event-prototype-note">Prototype only: the actions above update this browser view. No document is uploaded, reviewed, accepted, or sent.</p></section>`;
+}
+
+function eventMessagesSection(event) {
+  const threads = eventMessageThreads(event);
+  const state = eventWorkspaceState;
+  const selected = threads.find(thread => thread.id === state.selectedMessageThread) || threads[0];
+  const messages = state.messages.filter(message => message.threadId === selected.id);
+  const draft = state.messageDrafts[selected.id] || "";
+  const activity = [
+    { time: "Sep 28", title: "Venue payment and reservation recorded", detail: `${event.venue.invoiceId} · ${event.venue.status}` },
+    { time: "Sep 28", title: "Supplier orders created separately", detail: `${event.vendors.length} independent vendor order${event.vendors.length === 1 ? "" : "s"}` },
+    { time: "Sep 29", title: "Insurance reminder", detail: `Action required by ${eventRequirementDueDate(event, 7)}` }
+  ];
+  return `<section class="event-section" id="event-messages" aria-labelledby="event-messages-title"><div class="event-section-head"><div><span class="eyebrow">Booking-linked communication</span><h2 id="event-messages-title" tabindex="-1">Messages and notifications</h2><p>Each thread belongs to one supplier order. Venue staff and independent vendors cannot see one another’s messages.</p></div></div><div class="event-message-layout"><div><div class="event-thread-tabs" role="tablist" aria-label="Supplier message threads">${threads.map(thread => `<button type="button" role="tab" aria-selected="${thread.id === selected.id}" class="${thread.id === selected.id ? "active" : ""}" data-event-message-thread="${escapeHtml(thread.id)}"><span>${escapeHtml(thread.label)}</span><small>${escapeHtml(thread.recipient)}</small></button>`).join("")}</div><div class="event-thread" role="tabpanel" aria-label="${escapeHtml(selected.recipient)} message thread"><div class="event-thread-recipient"><strong>${escapeHtml(selected.recipient)}</strong><span>This message goes only to ${escapeHtml(selected.recipient)} about ${escapeHtml(selected.reference)}.</span></div><div class="event-message-list">${messages.map(message => `<article class="event-message"><div><strong>${escapeHtml(message.sender)}</strong><span>${escapeHtml(message.role)} · ${escapeHtml(message.time)}</span></div><p>${escapeHtml(message.body)}</p><small>${escapeHtml(message.delivery)}</small></article>`).join("") || '<p class="empty-guidance">No messages in this supplier thread yet.</p>'}</div><form id="event-message-form" class="event-message-form"><input type="hidden" name="threadId" value="${escapeHtml(selected.id)}"><label for="event-message-body">Message ${escapeHtml(selected.recipient)}</label><textarea id="event-message-body" name="message" rows="4" maxlength="600" placeholder="Ask about this supplier order only…">${escapeHtml(draft)}</textarea><div class="event-form-error" id="event-message-error" tabindex="-1" hidden></div><div class="event-card-actions"><button class="button button-green" type="submit">Send demo message</button><span>Prototype only — nothing is sent outside this browser.</span></div></form></div><p class="event-safety-note"><strong>Immediate safety emergency?</strong> Messages are not monitored continuously. Call 911.</p></div><aside class="event-activity"><h3>System activity</h3><p>Non-replyable status updates stay separate from supplier conversations.</p>${activity.map(item => `<div><time>${item.time}</time><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span></div>`).join("")}</aside></div></section>`;
+}
+
+function eventScheduleSection(event) {
+  const releaseDate = new Date(`${event.date}T12:00:00`);
+  releaseDate.setDate(releaseDate.getDate() - 1);
+  const releaseLabel = `${managedEventShortDate(releaseDate.toISOString().slice(0, 10))} at 6:00 p.m. Mountain Time`;
+  return `<section class="event-section" id="event-schedule" aria-labelledby="event-schedule-title"><div class="event-section-head"><div><span class="eyebrow">Day-of coordination</span><h2 id="event-schedule-title" tabindex="-1">Schedule and access</h2><p>Venue access, supplier arrival, guest time, cleanup, and lockup share one timeline without changing any supplier’s separate order.</p></div><button class="button button-light" type="button" data-task="Calendar file creation simulated; no calendar was changed.">Add to calendar (demo)</button></div><div class="event-schedule-grid"><ol class="event-timeline">${eventSchedule(event).map(item => `<li><time>${escapeHtml(item.time)}</time><div><span>${escapeHtml(item.type)}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.detail)}</p></div></li>`).join("")}</ol><aside class="event-access-card"><span class="event-status pending"><span aria-hidden="true">◷</span>Access pending</span><h3>Door instructions release later</h3><p>The booking owner can view the final entry instructions after the insurance requirement is accepted.</p><dl><div><dt>Release</dt><dd>${escapeHtml(releaseLabel)}</dd></div><div><dt>Location</dt><dd>${escapeHtml(event.address)}</dd></div><div><dt>Parking and loading</dt><dd>Use the signed west loading area during the booked setup window.</dd></div><div><dt>Accessibility</dt><dd>Step-free entrance and accessible washroom are included.</dd></div><div><dt>On-site contact</dt><dd>Released with the final access instructions.</dd></div></dl><p class="event-prototype-note">No door code is exposed in this prototype or in notification previews.</p></aside></div></section>`;
+}
+
+function eventChangeForm(event) {
+  const draft = eventWorkspaceState.changeDraft;
+  return `<form id="event-change-form" class="event-action-form"><div class="event-action-head"><div><span class="eyebrow">Non-destructive preview</span><h3>Preview a booking change</h3><p>Choose a proposed date, time, or attendance. The venue and every independent vendor are rechecked separately.</p></div><button class="text-button" type="button" data-event-action-close>Close preview</button></div><div class="event-change-columns"><fieldset><legend>Original booking</legend><dl><div><dt>Date</dt><dd>${managedEventShortDate(event.date)}</dd></div><div><dt>Time</dt><dd>${formatTime(event.start)}–${formatTime(event.end)}</dd></div><div><dt>Attendees</dt><dd>${event.guests}</dd></div></dl></fieldset><fieldset><legend>Proposed booking</legend><div class="event-form-grid"><label>Date<input type="date" name="date" value="${escapeHtml(draft.date)}" required></label><label>Start time<input type="time" name="start" value="${escapeHtml(draft.start)}" required></label><label>End time<input type="time" name="end" value="${escapeHtml(draft.end)}" required></label><label>Attendees<input type="number" name="guests" min="1" max="${event.capacity}" value="${draft.guests}" required></label><label class="full">Reason for the request<textarea name="reason" rows="3" maxlength="300" placeholder="Optional context for affected suppliers">${escapeHtml(draft.reason || "")}</textarea></label></div></fieldset></div><div class="event-form-error" id="event-change-error" tabindex="-1" hidden></div><div class="event-card-actions"><button class="button button-green" type="submit">Calculate impact</button><button class="button button-light" type="button" data-event-action-close>Keep current booking</button></div></form>`;
+}
+
+function eventChangePreview(event) {
+  const draft = eventWorkspaceState.changeDraft;
+  const impact = eventChangeImpact(event, draft);
+  const direction = impact.totalDifference > 0 ? `${moneyExact(impact.totalDifference)} estimated additional amount` : impact.totalDifference < 0 ? `${moneyExact(Math.abs(impact.totalDifference))} estimated credit` : "No known price difference";
+  return `<div class="event-action-form"><div class="event-action-head"><div><span class="eyebrow">Change impact preview</span><h3>Every supplier must recheck the proposal</h3><p>Nothing changes until the request is accepted under each affected supplier’s terms.</p></div><button class="text-button" type="button" data-event-action="change">Edit proposal</button></div><div class="event-impact-summary"><div><span>Original</span><strong>${managedEventShortDate(event.date)}</strong><small>${formatTime(event.start)}–${formatTime(event.end)} · ${event.guests} attendees</small></div><span aria-hidden="true">→</span><div><span>Proposed</span><strong>${managedEventShortDate(draft.date)}</strong><small>${formatTime(draft.start)}–${formatTime(draft.end)} · ${draft.guests} attendees</small></div></div><div class="event-impact-list"><article><div><span class="vendor-category">Venue booking</span><h4>${escapeHtml(event.venue.supplier)}</h4><p>Availability and venue requirements must be rechecked. Issued invoice ${escapeHtml(event.venue.invoiceId)} remains unchanged.</p></div><div><span class="event-status pending"><span aria-hidden="true">◷</span>Reconfirmation required</span><strong>${impact.venueDifference >= 0 ? "+" : "−"}${moneyExact(Math.abs(impact.venueDifference))}</strong></div></article>${impact.vendorRows.map(vendor => `<article><div><span class="vendor-category">${escapeHtml(vendor.category)} order</span><h4>${escapeHtml(vendor.supplier)}</h4><p>${escapeHtml(vendor.offering)} · availability, service window, configuration, and policy recheck required.</p></div><div><span class="event-status pending"><span aria-hidden="true">◷</span>Reconfirmation required</span><strong>${vendor.difference >= 0 ? "+" : "−"}${moneyExact(Math.abs(vendor.difference))}</strong></div></article>`).join("")}<article><div><span class="vendor-category">Security deposit</span><h4>Separate refundable amount</h4><p>The deposit is not supplier revenue and stays separate unless the accepted change alters the venue’s configured requirement.</p></div><div><span class="event-status neutral"><span aria-hidden="true">•</span>Unchanged estimate</span><strong>${moneyExact(event.totals.deposit)}</strong></div></article></div><div class="event-impact-total"><span>Known price impact</span><strong>${direction}</strong><small>Tax is recalculated supplier-by-supplier. Unknown changes remain subject to review.</small></div><form id="event-request-form"><input type="hidden" name="requestType" value="change"><label class="event-acknowledgement"><input type="checkbox" name="acknowledge" value="yes"> <span>I understand this is only a request and my original booking remains confirmed until every affected supplier accepts the change.</span></label><div class="event-form-error" id="event-request-error" tabindex="-1" hidden></div><div class="event-card-actions"><button class="button button-green" type="submit">Submit change request (demo)</button><button class="button button-light" type="button" data-event-action-close>Keep current booking</button></div></form><p class="event-prototype-note">Prototype only: no supplier is contacted, no availability is held, no invoice or credit is issued, and no money moves.</p></div>`;
+}
+
+function eventCancellationPreview(event) {
+  const supplierRows = [
+    { type: "Venue booking", name: event.venue.supplier, reference: event.bookingId, policy: event.venue.cancellationPolicy, fee: 0, refund: event.venue.total },
+    ...event.vendors.map(vendor => ({ type: `${vendor.category} order`, name: vendor.supplier, reference: vendor.orderId, policy: vendor.cancellationPolicy, fee: 0, refund: vendor.total }))
+  ];
+  const supplierRefund = supplierRows.reduce((sum, row) => sum + row.refund, 0);
+  const estimatedRefund = supplierRefund + event.totals.deposit;
+  return `<div class="event-action-form cancellation-preview"><div class="event-action-head"><div><span class="eyebrow">Cancellation impact preview</span><h3>Review each supplier separately</h3><p>This sample estimate assumes a request on September 29, 2026. A venue cancellation does not silently cancel or refund independent vendor orders.</p></div><button class="text-button" type="button" data-event-action-close>Close preview</button></div><div class="document-notice warning"><strong>Estimate only</strong><span>Each supplier applies its accepted policy. Refunds remain pending until cancellation acceptance and payment-provider confirmation.</span></div><div class="event-impact-list">${supplierRows.map(row => `<article><div><span class="vendor-category">${escapeHtml(row.type)}</span><h4>${escapeHtml(row.name)}</h4><p>${escapeHtml(row.reference)} · ${escapeHtml(row.policy)}</p></div><dl><div><dt>Estimated fee</dt><dd>${moneyExact(row.fee)}</dd></div><div><dt>Estimated refund</dt><dd>${moneyExact(row.refund)}</dd></div><div><dt>Status</dt><dd>Supplier review required</dd></div></dl></article>`).join("")}<article><div><span class="vendor-category">Security deposit · separate ledger</span><h4>Refundable security deposit</h4><p>No event inspection has occurred. Release still requires the accepted cancellation and payment-provider confirmation.</p></div><dl><div><dt>Estimated fee</dt><dd>${moneyExact(0)}</dd></div><div><dt>Estimated release</dt><dd>${moneyExact(event.totals.deposit)}</dd></div><div><dt>Status</dt><dd>Release pending</dd></div></dl></article></div><div class="event-impact-total"><span>Estimated total returned</span><strong>${moneyExact(estimatedRefund)}</strong><small>${moneyExact(supplierRefund)} supplier payments + ${moneyExact(event.totals.deposit)} separate deposit. Method and timing remain unconfirmed.</small></div><form id="event-request-form"><input type="hidden" name="requestType" value="cancel"><label class="event-acknowledgement danger"><input type="checkbox" name="acknowledge" value="yes"> <span>I understand this submits a cancellation request for separate supplier review. It does not cancel the booking, cancel vendor orders, issue a refund, or move the deposit.</span></label><div class="event-form-error" id="event-request-error" tabindex="-1" hidden></div><div class="event-card-actions"><button class="button button-danger" type="submit">Submit cancellation request (demo)</button><button class="button button-light" type="button" data-event-action-close>Keep current booking</button></div></form><p class="event-prototype-note">Prototype only: no booking or order is cancelled and no refund is initiated.</p></div>`;
+}
+
+function eventChangeCancelSection(event) {
+  const request = eventWorkspaceState.submittedRequest;
+  let content = `<div class="event-action-choices"><button type="button" data-event-action="change"><span aria-hidden="true">↻</span><strong>Preview a change</strong><small>Compare a proposed date, time, or attendance before requesting supplier reconfirmation.</small></button><button type="button" data-event-action="cancel"><span aria-hidden="true">×</span><strong>Review cancellation impact</strong><small>Estimate each supplier’s fee or refund and the separate deposit treatment.</small></button></div>`;
+  if (eventWorkspaceState.actionView === "change") content = eventChangeForm(event);
+  if (eventWorkspaceState.actionView === "change-preview") content = eventChangePreview(event);
+  if (eventWorkspaceState.actionView === "cancel") content = eventCancellationPreview(event);
+  if (request) content = `<div class="event-request-record" role="status"><span class="event-status pending"><span aria-hidden="true">◷</span>Request recorded</span><h3>${request.type === "change" ? "Change request awaiting supplier review" : "Cancellation request awaiting separate supplier reviews"}</h3><p>${escapeHtml(request.summary)}</p><dl><div><dt>Current booking</dt><dd>Still confirmed and unchanged</dd></div><div><dt>Payments and deposit</dt><dd>No money moved</dd></div><div><dt>Prototype delivery</dt><dd>No supplier was contacted</dd></div></dl><button class="button button-light" type="button" data-event-request-withdraw>Withdraw demo request</button></div>`;
+  return `<section class="event-section" id="event-change" aria-labelledby="event-change-title"><div class="event-section-head"><div><span class="eyebrow">Before anything changes</span><h2 id="event-change-title" tabindex="-1">Change or cancel</h2><p>Start with a reversible impact preview. The confirmed snapshot and issued supplier invoices are never overwritten.</p></div></div>${content}</section>`;
+}
+
+function customerEventPage() {
+  const event = activeManagedEvent();
+  ensureEventWorkspaceState(event);
+  const requirements = eventRequirements(event);
+  const nextAction = eventNextAction(event, requirements);
+  const completedRequirements = requirements.filter(item => ["Accepted", "Submitted", "Not required"].includes(item.status)).length;
+  const confirmedVendors = event.vendors.filter(item => item.status === "Confirmed").length;
+  const summaryStatus = `Venue confirmed · ${confirmedVendors} of ${event.vendors.length} vendor order${event.vendors.length === 1 ? "" : "s"} confirmed · ${requirements.filter(item => ["Action required", "Due soon"].includes(item.status)).length} requirement${requirements.filter(item => ["Action required", "Due soon"].includes(item.status)).length === 1 ? "" : "s"} due`;
+  return `<section class="my-event-page"><div class="my-event-wrap"><button class="back-link" type="button" data-route="customer-dashboard">← Back to My bookings</button><header class="my-event-hero"><div><span class="eyebrow">My Event · ${escapeHtml(event.bookingId)}</span><h1>${escapeHtml(event.purpose)}</h1><p>${escapeHtml(event.venue.name)} · <time datetime="${event.date}">${managedEventDate(event.date)}</time> · ${formatTime(event.start)}–${formatTime(event.end)} Mountain Time · ${event.guests} attendees</p><div class="event-summary-status">${escapeHtml(summaryStatus)}</div></div><div class="event-hero-actions"><span class="status-pill confirmed">Venue confirmed</span><button class="button button-light" type="button" data-route="customer-dashboard">All bookings</button></div></header>${roleContextNotice()}<ol class="event-stage-strip" aria-label="Event progress"><li class="complete"><span>1</span><strong>Booked</strong><small>Payment recorded</small></li><li class="current"><span>2</span><strong>Prepare</strong><small>Requirements due</small></li><li><span>3</span><strong>Event day</strong><small>Schedule and access</small></li><li><span>4</span><strong>Closeout</strong><small>Deposit and reviews</small></li></ol><article class="event-next-action"><div><span class="eyebrow">Next action · ${escapeHtml(nextAction.eyebrow)}</span><h2>${escapeHtml(nextAction.title)}</h2><p>${escapeHtml(nextAction.detail)}</p><small>Your venue reservation remains confirmed while this preparation item is open.</small></div><button class="button button-green" type="button" data-event-section="${nextAction.section}" ${nextAction.threadId ? `data-event-thread-target="${escapeHtml(nextAction.threadId)}"` : ""}>${escapeHtml(nextAction.action)}</button></article><nav class="event-local-nav" aria-label="My Event sections"><button type="button" data-event-section="event-overview">Overview</button><button type="button" data-event-section="event-orders">Supplier orders</button><button type="button" data-event-section="event-requirements">Requirements</button><button type="button" data-event-section="event-messages">Messages</button><button type="button" data-event-section="event-schedule">Schedule & access</button><button type="button" data-event-section="event-change">Change or cancel</button></nav><div class="event-workspace-grid"><main class="event-sections"><section class="event-section" id="event-overview" aria-labelledby="event-overview-title"><div class="event-section-head"><div><span class="eyebrow">Operational snapshot</span><h2 id="event-overview-title" tabindex="-1">Overview</h2><p>The venue reservation, independent supplier orders, requirements, and deposit keep their own status.</p></div></div><div class="event-readiness-grid"><article><span>Venue booking</span><strong>${event.venue.status}</strong><small>${event.venue.supplier}</small></article><article><span>Vendor orders</span><strong>${confirmedVendors}/${event.vendors.length} confirmed</strong><small>${event.vendors.some(item => item.statusClass === "attention") ? "One supplier needs a detail" : "No supplier action due"}</small></article><article><span>Requirements</span><strong>${completedRequirements}/${requirements.length} ready</strong><small>${requirements.find(item => item.status === "Action required")?.title || "No required action"}</small></article><article><span>Security deposit</span><strong>${moneyExact(event.totals.deposit)}</strong><small>Held separately · not supplier revenue</small></article></div><div class="event-overview-notes"><div><strong>What is confirmed</strong><span>Your venue time and the supplier orders marked Confirmed are reserved in this fictional sample.</span></div><div><strong>What still needs attention</strong><span>Complete the listed requirements and reply only within the affected supplier thread.</span></div><div><strong>What happens later</strong><span>Event completion, supplier fulfilment, deposit release or claim, and reviews are separate post-event steps.</span></div></div></section><section class="event-section" id="event-orders" aria-labelledby="event-orders-title"><div class="event-section-head"><div><span class="eyebrow">Separate supplier records</span><h2 id="event-orders-title" tabindex="-1">Venue and vendor orders</h2><p>One status never stands in for the whole event. Each supplier keeps its own order, invoice, messages, service window, and accepted policy.</p></div></div><div class="event-order-list">${eventOrderCard(event.venue, "venue", event)}${event.vendors.map(vendor => eventOrderCard(vendor, "vendor", event)).join("")}</div></section>${eventRequirementsSection(event, requirements)}${eventMessagesSection(event)}${eventScheduleSection(event)}${eventChangeCancelSection(event)}</main><aside class="event-booking-summary"><span class="eyebrow">Booking summary</span><h2>${escapeHtml(event.venue.name)}</h2><dl><div><dt>Date</dt><dd>${managedEventShortDate(event.date)}</dd></div><div><dt>Booked time</dt><dd>${formatTime(event.start)}–${formatTime(event.end)} MT</dd></div><div><dt>Attendees</dt><dd>${event.guests}</dd></div><div><dt>Booking owner</dt><dd>${escapeHtml(event.owner)}</dd></div><div><dt>Venue and services paid</dt><dd>${moneyExact(event.totals.servicesTotal)}</dd></div><div><dt>Refundable deposit</dt><dd>${moneyExact(event.totals.deposit)}</dd></div><div class="total"><dt>Total paid</dt><dd>${moneyExact(event.totals.dueNow)}</dd></div></dl><div class="event-summary-docs"><strong>Customer-visible records</strong><span>${escapeHtml(event.venue.invoiceId)} · venue invoice</span>${event.vendors.map(vendor => `<span>${escapeHtml(vendor.invoiceId)} · ${escapeHtml(vendor.category.toLowerCase())} invoice</span>`).join("")}<span>${escapeHtml(event.receiptId)} · grouped receipt</span></div>${eventDocumentButton(event)}<p>Supplier-private payout, commission, bank, tax-registration, and reconciliation details are intentionally excluded.</p></aside></div><p class="event-workspace-boundary">Interactive prototype · All people, bookings, suppliers, requirements, messages, addresses, documents, and amounts are fictional. Browser refresh resets My Event activity. This workspace coordinates the booking; it is not an attendee ticketing, RSVP, seating, check-in, or public event-site system.</p></div></section>`;
+}
+
 function customerDashboardPage() {
   const role = activeRole();
   const deposit = depositStatus();
+  const upcomingEvent = activeManagedEvent();
+  ensureEventWorkspaceState(upcomingEvent);
+  const upcomingRequirements = eventRequirements(upcomingEvent);
+  const upcomingNextAction = eventNextAction(upcomingEvent, upcomingRequirements);
+  const confirmedVendorCount = upcomingEvent.vendors.filter(item => item.status === "Confirmed").length;
   const checkoutTotal = financeDemo.association.gross + financeDemo.vendor.gross + financeDemo.deposit;
-  const documentCount = 4 + (hasIssuedSupplementalClaim() ? 1 : 0);
+  const documentCount = 8 + upcomingEvent.vendors.length + (hasIssuedSupplementalClaim() ? 1 : 0);
   const reviewTargets = reviewTargetsForBooking();
   const reviewedCount = reviewTargets.filter(target => organizerReviews[reviewKey(target)]).length;
   const reviewStatus = reviewedCount === reviewTargets.length ? "Reviews complete" : !reviewWindowOpen() ? "Review window closed" : `${reviewTargets.length - reviewedCount} review${reviewTargets.length - reviewedCount === 1 ? "" : "s"} remaining`;
   const reviewButtonLabel = reviewedCount === reviewTargets.length ? (reviewWindowOpen() ? "View or edit reviews" : "View submitted reviews") : reviewWindowOpen() ? `Leave reviews · ${reviewedCount}/${reviewTargets.length}` : "View review status";
-  return `<section class="customer-dashboard"><div class="customer-dashboard-head"><div><span class="eyebrow">Customer account</span><h1>My bookings</h1><p>Welcome back, ${role.name}. Your supplier documents, payment receipt, event requirements, and deposit record stay together without exposing seller-private settlement details.</p></div><div class="avatar large">${role.initials}</div></div>${roleContextNotice()}<div class="customer-metrics"><div><span>Recent bookings</span><strong>1 booking</strong><small>${financeDemo.eventDate}</small></div><div><span>Documents</span><strong>${documentCount} available</strong><small>${hasIssuedSupplementalClaim() ? "Includes approved supplemental invoice" : "Invoices, receipt + account statement"}</small></div><div><span>Security deposit</span><strong>${money(financeDemo.deposit)}</strong><small>${deposit.label} · separate record</small></div><div><span>Verified reviews</span><strong>${reviewedCount} of ${reviewTargets.length}</strong><small>${reviewStatus}</small></div></div><article class="customer-booking-card"><div class="customer-booking-title"><div><span class="account-badge">Completed · ${financeDemo.bookingId}</span><h2>${financeDemo.event}</h2><p>Ridgeview Community Hall · ${financeDemo.eventDate} · event completed</p></div><strong>${moneyExact(checkoutTotal)} paid</strong></div><div class="customer-booking-grid"><div><span>Venue supplier</span><strong>${financeDemo.venueSupplier}</strong><small>Venue rental, venue-owned add-ons, and refundable deposit record</small></div><div><span>Independent vendor</span><strong>${financeDemo.vendorSupplier}</strong><small>Family magic show · separately supplied and invoiced</small></div><div><span>Next step</span><strong>${depositView === "customer_review" ? "Review documented deposit claim" : deposit.label}</strong><small>${deposit.detail}</small></div></div><div class="button-row"><button class="button button-dark" data-route="customer-documents">View booking documents</button><button class="button button-light" data-route="${closeoutFinalized ? "final-statement" : "interim-statement"}">View current statement</button><button class="button button-light" data-route="customer-deposit">View deposit status</button></div></article><article class="customer-review-card"><div><span class="account-badge">Verified post-event reviews</span><h2>Help future organizers choose with confidence</h2><p>Review the venue and each fulfilled vendor separately. Your deposit case, private support messages, and supplier settlement details stay outside the public review.</p></div><button class="button button-green" data-route="customer-reviews">${reviewButtonLabel}</button></article>${customerDepositCard()}<div class="privacy-boundary"><strong>Customer privacy boundary</strong><span>You can see what you bought, paid, and may receive back. Venue and vendor bank details, platform fees, processing allocations, and private payout statements are intentionally excluded.</span></div></section>`;
+  return `<section class="customer-dashboard"><div class="customer-dashboard-head"><div><span class="eyebrow">Customer account</span><h1>My bookings</h1><p>Welcome back, ${role.name}. Open an upcoming event to manage supplier orders, requirements, messages, day-of access, and safe change or cancellation previews.</p></div><div class="avatar large">${role.initials}</div></div>${roleContextNotice()}<div class="customer-metrics"><div><span>Recent bookings</span><strong>2 bookings</strong><small>1 upcoming · 1 completed</small></div><div><span>Customer documents</span><strong>${documentCount} available</strong><small>${hasIssuedSupplementalClaim() ? "Includes approved supplemental invoice" : "Supplier invoices, receipts + statements"}</small></div><div><span>Upcoming supplier orders</span><strong>${confirmedVendorCount + 1}/${upcomingEvent.vendors.length + 1} confirmed</strong><small>Venue and vendors tracked separately</small></div><div><span>Verified reviews</span><strong>${reviewedCount} of ${reviewTargets.length}</strong><small>${reviewStatus}</small></div></div><article class="customer-booking-card upcoming"><div class="customer-booking-title"><div><span class="account-badge">Upcoming · ${upcomingEvent.bookingId}</span><h2>${escapeHtml(upcomingEvent.purpose)}</h2><p>${escapeHtml(upcomingEvent.venue.name)} · ${managedEventDate(upcomingEvent.date)} · ${formatTime(upcomingEvent.start)}–${formatTime(upcomingEvent.end)} Mountain Time</p></div><strong>${moneyExact(upcomingEvent.totals.dueNow)} paid</strong></div><div class="customer-booking-grid"><div><span>Venue booking</span><strong>${upcomingEvent.venue.status}</strong><small>${escapeHtml(upcomingEvent.venue.supplier)}</small></div><div><span>Independent vendors</span><strong>${confirmedVendorCount} of ${upcomingEvent.vendors.length} confirmed</strong><small>Each service has its own order, messages, invoice, and policy</small></div><div><span>Next action</span><strong>${escapeHtml(upcomingNextAction.title)}</strong><small>${escapeHtml(upcomingNextAction.eyebrow)}</small></div></div><div class="button-row"><button class="button button-green" data-route="customer-event">Open My Event</button>${eventDocumentButton(upcomingEvent)}</div></article><article class="customer-booking-card completed"><div class="customer-booking-title"><div><span class="account-badge">Completed · ${financeDemo.bookingId}</span><h2>${financeDemo.event}</h2><p>Ridgeview Community Hall · ${financeDemo.eventDate} · event completed</p></div><strong>${moneyExact(checkoutTotal)} paid</strong></div><div class="customer-booking-grid"><div><span>Venue supplier</span><strong>${financeDemo.venueSupplier}</strong><small>Venue rental, venue-owned add-ons, and refundable deposit record</small></div><div><span>Independent vendor</span><strong>${financeDemo.vendorSupplier}</strong><small>Family magic show · separately supplied and invoiced</small></div><div><span>Next step</span><strong>${depositView === "customer_review" ? "Review documented deposit claim" : deposit.label}</strong><small>${deposit.detail}</small></div></div><div class="button-row"><button class="button button-dark" data-route="customer-documents">View booking documents</button><button class="button button-light" data-route="${closeoutFinalized ? "final-statement" : "interim-statement"}">View current statement</button><button class="button button-light" data-route="customer-deposit">View deposit status</button></div></article><article class="customer-review-card"><div><span class="account-badge">Verified post-event reviews</span><h2>Help future organizers choose with confidence</h2><p>Review the venue and each fulfilled vendor separately. Your deposit case, private support messages, and supplier settlement details stay outside the public review.</p></div><button class="button button-green" data-route="customer-reviews">${reviewButtonLabel}</button></article>${customerDepositCard()}<div class="privacy-boundary"><strong>Customer privacy boundary</strong><span>You can see what you bought, paid, and may receive back. Venue and vendor bank details, platform fees, processing allocations, and private payout statements are intentionally excluded.</span></div></section>`;
 }
 
 function reviewRatingFieldset(target, existing) {
@@ -1396,7 +1778,9 @@ function setActiveRole(roleId) {
   const nextRole = demoRoles.find(role => role.id === roleId);
   if (!nextRole) return;
   if (activeRoleId !== nextRole.id) {
-    confirmedBookingSnapshot = null;
+    const preserveSignedOutCheckout = !activeRoleId && nextRole.accountType === "customer" && Boolean(confirmedBookingSnapshot);
+    if (!preserveSignedOutCheckout) confirmedBookingSnapshot = null;
+    resetEventWorkspaceState();
     reviewEditingTarget = null;
     endSupportSession("Ended automatically when the demo role changed");
   }
@@ -1416,6 +1800,7 @@ function signOut() {
   endSupportSession("Ended automatically when the demo session signed out");
   activeRoleId = null;
   confirmedBookingSnapshot = null;
+  resetEventWorkspaceState();
   reviewEditingTarget = null;
   bookingData.contact = "Alex Morgan";
   bookingData.email = "alex@example.com";
@@ -1485,6 +1870,7 @@ function render(route = location.hash.slice(1) || "home") {
     "fee-settings": feeSettingsPage,
     "vendor-dashboard": vendorDashboardPage,
     "customer-dashboard": customerDashboardPage,
+    "customer-event": customerEventPage,
     "customer-reviews": customerReviewsPage,
     "customer-documents": customerDocumentsPage,
     "customer-deposit": customerDepositPage,
@@ -1513,6 +1899,7 @@ function render(route = location.hash.slice(1) || "home") {
     "fee-settings": "Commercial terms",
     "vendor-dashboard": "Vendor portal demo",
     "customer-dashboard": "My bookings",
+    "customer-event": "My Event",
     "customer-reviews": "Review your event",
     "customer-documents": "Customer booking documents",
     "customer-deposit": "Customer deposit response",
@@ -1562,6 +1949,125 @@ function bindPageEvents() {
   app.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => navigate(el.dataset.route)));
   app.querySelectorAll("[data-demo-role]").forEach(button => button.addEventListener("click", () => setActiveRole(button.dataset.demoRole)));
   app.querySelectorAll("[data-sign-out]").forEach(button => button.addEventListener("click", signOut));
+  const focusEventSection = (sectionId, selector = "h2") => requestAnimationFrame(() => {
+    const section = app.querySelector(`#${CSS.escape(sectionId)}`);
+    const target = section?.querySelector(selector) || section;
+    section?.scrollIntoView({ behavior: "smooth", block: "start" });
+    target?.focus({ preventScroll: true });
+  });
+  app.querySelectorAll("[data-event-section]").forEach(button => button.addEventListener("click", () => {
+    const threadTarget = button.dataset.eventThreadTarget;
+    if (threadTarget) {
+      eventWorkspaceState.selectedMessageThread = threadTarget;
+      render("customer-event");
+      focusEventSection(button.dataset.eventSection);
+      return;
+    }
+    focusEventSection(button.dataset.eventSection);
+  }));
+  app.querySelectorAll("[data-event-message-thread]").forEach(button => button.addEventListener("click", () => {
+    eventWorkspaceState.selectedMessageThread = button.dataset.eventMessageThread;
+    render("customer-event");
+    focusEventSection("event-messages", `[data-event-message-thread="${CSS.escape(eventWorkspaceState.selectedMessageThread)}"]`);
+  }));
+  app.querySelector("#event-message-body")?.addEventListener("input", event => {
+    eventWorkspaceState.messageDrafts[eventWorkspaceState.selectedMessageThread] = event.currentTarget.value;
+  });
+  app.querySelector("#event-message-form")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const threadId = String(new FormData(form).get("threadId") || "");
+    const message = String(new FormData(form).get("message") || "").trim();
+    const error = form.querySelector("#event-message-error");
+    if (!message) {
+      error.hidden = false;
+      error.textContent = "Write a message before saving it to this demo thread.";
+      error.focus();
+      return;
+    }
+    eventWorkspaceState.messages.push({ id: `MSG-DEMO-${eventWorkspaceState.messages.length + 1}`, threadId, sender: activeRole()?.name || "Organizer", role: "Organizer", time: "Just now", body: message, delivery: "Saved in prototype · not sent" });
+    eventWorkspaceState.messageDrafts[threadId] = "";
+    render("customer-event");
+    focusEventSection("event-messages");
+    showToast("Demo message saved in this browser; nothing was sent.");
+  });
+  app.querySelectorAll("[data-event-requirement]").forEach(button => button.addEventListener("click", () => {
+    const requirementId = button.dataset.eventRequirement;
+    const isCount = requirementId === "headcount";
+    eventWorkspaceState.requirementOverrides[requirementId] = {
+      status: "Submitted",
+      statusClass: "pending",
+      due: "Awaiting venue review",
+      consequence: isCount ? "The demo attendee count was saved for supplier planning; no supplier was notified." : "A demo evidence record was added for review; no file was uploaded or sent.",
+      action: null
+    };
+    render("customer-event");
+    focusEventSection("event-requirements");
+    showToast(isCount ? "Demo attendee count saved; no supplier was notified." : "Demo evidence recorded; no file was uploaded.");
+  }));
+  app.querySelectorAll("[data-event-action]").forEach(button => button.addEventListener("click", () => {
+    eventWorkspaceState.actionView = button.dataset.eventAction;
+    render("customer-event");
+    focusEventSection("event-change");
+  }));
+  app.querySelectorAll("[data-event-action-close]").forEach(button => button.addEventListener("click", () => {
+    eventWorkspaceState.actionView = null;
+    render("customer-event");
+    focusEventSection("event-change");
+    showToast("Preview closed. The confirmed booking was not changed.");
+  }));
+  app.querySelector("#event-change-form")?.addEventListener("input", event => {
+    if (!event.currentTarget.matches("form")) return;
+    const data = new FormData(event.currentTarget);
+    eventWorkspaceState.changeDraft = { date: String(data.get("date") || ""), start: String(data.get("start") || ""), end: String(data.get("end") || ""), guests: Number(data.get("guests") || 0), reason: String(data.get("reason") || "") };
+  });
+  app.querySelector("#event-change-form")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const draft = { date: String(data.get("date") || ""), start: String(data.get("start") || ""), end: String(data.get("end") || ""), guests: Number(data.get("guests") || 0), reason: String(data.get("reason") || "").trim() };
+    const error = event.currentTarget.querySelector("#event-change-error");
+    if (!draft.date || !Number.isFinite(timeAsHours(draft.start)) || !Number.isFinite(timeAsHours(draft.end)) || timeAsHours(draft.end) <= timeAsHours(draft.start) || !Number.isInteger(draft.guests) || draft.guests < 1) {
+      error.hidden = false;
+      error.textContent = "Choose a valid proposed date, an end time after the start time, and at least one attendee.";
+      error.focus();
+      return;
+    }
+    eventWorkspaceState.changeDraft = draft;
+    eventWorkspaceState.actionView = "change-preview";
+    render("customer-event");
+    focusEventSection("event-change");
+  });
+  app.querySelector("#event-request-form")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const error = event.currentTarget.querySelector("#event-request-error");
+    if (data.get("acknowledge") !== "yes") {
+      error.hidden = false;
+      error.textContent = "Confirm that you understand this demo request does not change the booking or move money.";
+      error.focus();
+      return;
+    }
+    const type = String(data.get("requestType") || "change");
+    const eventRecord = activeManagedEvent();
+    const draft = eventWorkspaceState.changeDraft;
+    eventWorkspaceState.submittedRequest = {
+      type,
+      summary: type === "change"
+        ? `Proposed ${managedEventShortDate(draft.date)}, ${formatTime(draft.start)}–${formatTime(draft.end)}, ${draft.guests} attendees. The original ${eventRecord.bookingId} remains confirmed.`
+        : `${eventRecord.bookingId} and ${eventRecord.vendors.length} independent vendor order${eventRecord.vendors.length === 1 ? "" : "s"} would require separate review. The original booking remains confirmed.`
+    };
+    eventWorkspaceState.actionView = null;
+    render("customer-event");
+    focusEventSection("event-change");
+    showToast("Demo request recorded; no supplier was contacted and nothing changed.");
+  });
+  app.querySelector("[data-event-request-withdraw]")?.addEventListener("click", () => {
+    eventWorkspaceState.submittedRequest = null;
+    eventWorkspaceState.actionView = null;
+    render("customer-event");
+    focusEventSection("event-change");
+    showToast("Demo request removed. The confirmed booking remains unchanged.");
+  });
   app.querySelectorAll("[data-review-edit]").forEach(button => button.addEventListener("click", () => {
     reviewEditingTarget = button.dataset.reviewEdit;
     render("customer-reviews");
@@ -1899,7 +2405,7 @@ function bindPageEvents() {
     } else bookingStep = Math.max(1, bookingStep - 1);
     render("booking");
   });
-  app.querySelector("#confirm-booking")?.addEventListener("click", () => { if (!app.querySelector("#agree").checked) { showToast("Please accept the applicable booking policies to continue."); return; } const fit = eventCompatibility(); if (fit.status !== "allowed") { showToast(`${fit.label}. The venue must approve this use before payment.`); bookingStep = 2; addonStage = "fit"; render("booking"); return; } ensureRequiredAddons(); if (!availability().available) { showToast("That venue time is no longer available. Please choose another time."); navigate("venue"); return; } const vendorStatus = selectedVendorAvailability(); if (!vendorStatus.ready) { showToast(vendorStatus.pendingConfirmations.length ? "Vendor allergy confirmation is required before payment." : `${vendorStatus.unavailable.map(item => item.name).join(", ")} is no longer available. Please update vendor services.`); bookingStep = 2; addonStage = "services"; activeServiceType = null; render("booking"); return; } confirmedBookingSnapshot = createBookingSnapshot(); bookingSequence += 1; bookingStep = 4; render("booking"); });
+  app.querySelector("#confirm-booking")?.addEventListener("click", () => { if (!app.querySelector("#agree").checked) { showToast("Please accept the applicable booking policies to continue."); return; } const fit = eventCompatibility(); if (fit.status !== "allowed") { showToast(`${fit.label}. The venue must approve this use before payment.`); bookingStep = 2; addonStage = "fit"; render("booking"); return; } ensureRequiredAddons(); if (!availability().available) { showToast("That venue time is no longer available. Please choose another time."); navigate("venue"); return; } const vendorStatus = selectedVendorAvailability(); if (!vendorStatus.ready) { showToast(vendorStatus.pendingConfirmations.length ? "Vendor allergy confirmation is required before payment." : `${vendorStatus.unavailable.map(item => item.name).join(", ")} is no longer available. Please update vendor services.`); bookingStep = 2; addonStage = "services"; activeServiceType = null; render("booking"); return; } confirmedBookingSnapshot = createBookingSnapshot(); resetEventWorkspaceState(); bookingSequence += 1; bookingStep = 4; render("booking"); });
   app.querySelector("#release-deposit")?.addEventListener("click", () => { depositDeduction = 0; depositView = "release_approval_pending"; render("deposit"); });
   app.querySelector("#propose-deduction")?.addEventListener("click", () => { depositView = "deduction"; render("deposit"); });
   app.querySelector("#cancel-deduction")?.addEventListener("click", () => { depositView = "review"; render("deposit"); });

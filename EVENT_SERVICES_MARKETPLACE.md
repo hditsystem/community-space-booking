@@ -437,6 +437,25 @@ For catering, collect cuisine, attendee count, menu/package, dietary support, al
 
 Before payment, recheck the purpose status and every selected offering using its complete service interval and current capacity, lead time, service area, venue policy, facility requirements, configuration, inventory, price, tax profile, and cancellation terms. If the use requires venue approval, remove the Instant Book promise and block payment until a recorded approval changes the status. If a selected package becomes invalid, preserve it as **Needs attention**, explain why, and require the organizer to replace or remove it—never silently remove it or reduce the charge. Snapshot the purpose, material answers, policy result, selected package, configuration, price, tax, terms, eligibility evidence, and supplier identity when payment is confirmed.
 
+## Organizer My Event workspace
+
+After confirmation, give the booking owner one organizer-only **My Event** workspace for operational coordination. This unified presentation must not collapse the commercial or legal distinction between suppliers: the venue booking and every independent vendor order keep separate references, statuses, terms, invoices, fulfilment decisions, cancellation outcomes, disputes, and settlement records.
+
+The workspace should contain:
+
+1. **Event overview** — confirmed venue, date and time, purpose, attendance, payment and refundable-security-deposit status, selected services, and the next required organizer action.
+2. **Separate supplier statuses** — the venue booking plus one status for each vendor order, with clear labels such as confirmed, action required, awaiting supplier response, ready for service, fulfilled, changed, or cancelled. An issue with one order must not imply that every supplier is unavailable or unpaid.
+3. **Requirements and documents** — the conditional task model described above, grouped by responsible party and due date, with links to applicable supplier invoices, receipt, insurance or permit evidence, acknowledgements, and later account statements. Displaying a file as submitted is not the same as venue, vendor, regulator, or platform verification.
+4. **Booking-linked messages** — event-scoped messages that identify the sender and intended recipient and remain linked to the venue booking or applicable vendor order. Keep private supplier settlement notes, unrelated customer records, access credentials, full payment details, and sensitive dietary, allergy, accessibility, or dispute evidence in appropriately restricted records rather than a general conversation.
+5. **Schedule and access** — one readable itinerary that includes the venue access window, organizer setup and cleanup, vendor arrival, loading and delivery, each service window, teardown and collection, checkout, and relevant day-of contacts. The itinerary coordinates the event but does not merge supplier obligations. Release door codes, key instructions, alarm information, or other sensitive access data only at the configured time and only to authorized recipients.
+6. **Change and cancellation preview** — a non-destructive calculation that rechecks the proposed date, time, attendance, purpose, requirements, venue inventory, and vendor availability. Itemize the estimated result for the venue and every vendor order, including approval needs, price differences, cancellation charges, credits, refunds, non-refundable amounts, and any additional payment. Opening, editing, closing, or abandoning a preview must not modify the confirmed booking.
+
+If the organizer submits a change or cancellation request, preserve the original confirmation snapshot and create an auditable workflow. Record the request version, reason, actor, affected suppliers, availability results, supplier decisions, policy versions, expiry, and resulting change orders. Financial completion requires the appropriate supplier invoice, supplemental invoice, credit note, refund, or additional payment plus provider confirmation; a screen estimate or supplier acceptance alone is not a completed financial outcome.
+
+The current prototype keeps the workspace, messages, statuses, checklist interactions, and financial-impact previews in browser memory for demonstration only. It does not message a supplier, verify a document, expose a real access credential, reserve capacity, amend or cancel an order, issue an invoice or credit note, submit a refund, or move money.
+
+This workspace is not an attendee-management module. Ticket sales, invitations, RSVP tracking, seating plans, attendee accounts, check-in, badges, and public event websites remain outside the pilot unless later evidence supports a deliberate expansion.
+
 ## Verified post-event reviews
 
 The booking owner may review the venue and every fulfilled independent-vendor order as separate targets after the relevant service is completed. A venue review must describe the venue experience; a vendor review must describe that vendor's package and fulfilment. Do not combine them into one event score that obscures which supplier delivered what.

@@ -315,8 +315,27 @@ Keep the first build narrow. The pilot should prove that accurate inventory can 
 - Secure card or digital-wallet checkout.
 - Clear pages for payment processing, booking confirmation, payment failure, cancellation, completion, and refunds.
 - Supplier invoice, payment receipt, calendar invitation, booking-management link, reminders, and time-gated access instructions.
+- Organizer-only **My Event** workspace with the venue booking, separate vendor-order statuses, requirements and documents, booking-linked messages, and a coordinated event-day schedule.
+- Change and cancellation impact preview that separates the estimated venue and vendor consequences and does not amend or cancel anything until the organizer submits a request and every required workflow succeeds.
 - Post-event Final Booking Statement showing adjustments, credits, payments, refunds, and security-deposit outcome.
 - A 30-day post-event review task with one independent venue review and one review for each fulfilled vendor order, optional private feedback, and clear submitted, edited, and expired states.
+
+### Organizer My Event workspace
+
+After confirmation, the booking owner should receive one operational workspace for the event. It is a coordination view, not a new combined supplier order: the venue booking and every third-party vendor order retain their own supplier, status, price, terms, documents, fulfilment outcome, refund calculation, and settlement record.
+
+The workspace should provide:
+
+- **Overview:** booking reference, venue, date and time, event purpose, attendance, payment status, security-deposit status, and the next organizer action.
+- **Venue and vendor status:** a confirmed venue-booking status plus one independently updated status for each selected vendor order. A vendor delay, cancellation, dispute, or fulfilment result must not silently change another supplier's state.
+- **Requirements and documents:** a due-date checklist for insurance, licences, permits, layouts, acknowledgements, supplier confirmations, invoices, receipts, and access prerequisites, with the responsible party and review status visible.
+- **Booking-linked messages:** a single event conversation index with messages attributed to the organizer, venue operator, applicable vendor, or platform support. Supplier-private threads, unrelated customer data, medical details, payment credentials, and internal payout information remain outside the organizer view.
+- **Schedule and access:** venue access window, setup, vendor arrival and delivery, service times, teardown, cleanup, checkout, loading instructions, keys or access-code release timing, and emergency or day-of contacts. Time-gated secrets must not be exposed before their release condition.
+- **Change or cancel:** a non-destructive preview that rechecks availability and policy, itemizes the estimated effect on the venue booking and each vendor order, identifies required approvals, and shows expected credits, refunds, retained amounts, or new charges before submission. Opening or closing the preview changes nothing.
+
+Production actions must create an auditable request, preserve the original confirmed snapshot, obtain any supplier decisions, create versioned change orders and the required invoice, credit-note, refund, or additional-payment records, and notify affected parties. A displayed estimate is not an approved amendment, cancellation, credit, refund, or promise of payment timing.
+
+The clickable prototype demonstrates this workspace only in browser memory. It does not send a message, upload or verify a document, reveal a real access credential, change availability, amend a supplier order, cancel a booking, contact a participant, issue money, or persist after the demo state is reset.
 
 ### Venue operations
 
@@ -356,6 +375,7 @@ Keep the first build narrow. The pilot should prove that accurate inventory can 
 - Native mobile apps.
 - Complex revenue management or dynamic pricing.
 - Multi-party event planning and attendee accounts.
+- Attendee-facing event management, including ticket sales, invitations and RSVP tracking, seating plans, badge or check-in workflows, and public event websites. The organizer may record attendance requirements, but Gather remains focused on the venue booking and supplier-service lifecycle.
 - Broad geographic expansion or venue categories that require a different compliance model.
 
 ## Booking lifecycle
