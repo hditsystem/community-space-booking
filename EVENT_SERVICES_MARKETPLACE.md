@@ -286,6 +286,26 @@ Bundles are editable suggestions, never mandatory packages.
 | Fitness or recurring class | Instructor equipment, sound, participant supplies, first aid, recurring cleaning |
 | Market or trade show | Booth/table package, power, signage, registration, security, waste services |
 
+## Purpose-guided add-on discovery
+
+Do not begin with one long list of every possible venue and vendor add-on. Ask what the organizer is planning, collect only the material activity answers for that purpose, and use those answers to organize the next choices. Purpose drives recommendations; it does not override venue policy.
+
+Each venue configures every supported purpose as one of:
+
+- **Allowed** — the use may remain Instant Book when availability and all other rules pass.
+- **Approval required** — the organizer may explore compatible options, but the page must stop claiming Instant Book and payment remains blocked until an authorized venue decision is recorded.
+- **Prohibited / not offered** — the organizer must choose a different purpose or facility.
+
+The add-on experience should then proceed in three short stages:
+
+1. **Fit and included:** show the selected purpose, venue-policy outcome, included amenities, automatically triggered required items, and conditional tasks. Explain the rule that caused every required item.
+2. **Venue options:** show venue-supplied items with clear **Required**, **Recommended for this purpose**, **Also available**, or **Unavailable** labels. Required items cannot be removed while their trigger remains true. Optional paid items always start unchecked.
+3. **Event services:** show compact category cards for recommended and already-selected services first. Let the organizer open one category at a time to compare actual provider offerings, then return without losing choices made in other categories. Always provide **Browse all services allowed at this venue** so a recommendation does not become an artificial catalogue restriction.
+
+The **Other / not sure** purpose asks for a plain-language activity description and falls back to all facility-compatible categories. It remains approval-required until the venue classifies the use; it must never borrow an Instant Book label from the room's general availability.
+
+Changing the purpose, venue, date, time, attendance, or a material activity answer revalidates required items and every retained vendor selection. Preserve selections that remain valid. Keep an invalid retained item visible as **Needs attention**, explain the exact failed policy, availability, capacity, lead-time, or facility rule, and require the organizer to replace or remove it before payment. Never silently remove, substitute, or bill an invalid item.
+
 ## Dynamic booking and compliance questionnaire
 
 Ask the organizer only questions relevant to the selected event. Answers produce tasks, fees, restrictions, and service suggestions.
@@ -400,6 +420,8 @@ Do not use a single vague “Verified” badge. Display the specific checks comp
 
 The organizer chooses an offering, not merely a category label. Group competing packages by a specific service need—such as catering, magic show, face painting, cake, décor, or photo booth—and allow at most one selected package within a mutually exclusive group. Complementary groups may be combined when the venue and event permit them.
 
+The category overview should stay compact: purpose-recommended and already-selected categories appear first with a count of currently available packages and an indicative starting price. A separate control exposes every category with at least one package configured for the facility. No paid package is selected merely because it is recommended, and the recommendation model must not rank by Gather commission.
+
 Every comparison card should show:
 
 - Supplier and package name.
@@ -413,7 +435,7 @@ Keep unavailable lower-priced packages visible by default. This lets the organiz
 
 For catering, collect cuisine, attendee count, menu/package, dietary support, allergy or cross-contact review needs, serving style, delivery/setup time, staff and tableware needs, venue-kitchen requirements, and organizer notes. Dietary and allergy fields describe vendor-reported capabilities; they must not promise “allergen-free.” A material allergy request requires a vendor acknowledgement or confirmation before the catering order becomes final. Sending the request does not count as confirmation: the response must come from an authenticated vendor user or a verified integration and remain tied to the exact package, date, time, attendance, and stated requirements.
 
-Before payment, recheck every selected offering using its complete service interval and current capacity, lead time, service area, venue policy, facility requirements, configuration, inventory, price, tax profile, and cancellation terms. If a selected package becomes invalid, preserve it as **Needs attention**, explain why, and require the organizer to replace or remove it—never silently remove it or reduce the charge. Snapshot the selected package, configuration, price, tax, terms, eligibility evidence, and supplier identity when payment is confirmed.
+Before payment, recheck the purpose status and every selected offering using its complete service interval and current capacity, lead time, service area, venue policy, facility requirements, configuration, inventory, price, tax profile, and cancellation terms. If the use requires venue approval, remove the Instant Book promise and block payment until a recorded approval changes the status. If a selected package becomes invalid, preserve it as **Needs attention**, explain why, and require the organizer to replace or remove it—never silently remove it or reduce the charge. Snapshot the purpose, material answers, policy result, selected package, configuration, price, tax, terms, eligibility evidence, and supplier identity when payment is confirmed.
 
 ## Verified post-event reviews
 
@@ -568,12 +590,14 @@ The product should encode configurable rules and link to current official guidan
 
 ## Immediate validation plan
 
-1. Interview five community associations about outside-vendor rules, preferred suppliers, required fees, insurance, cleanup, and responsibility when a vendor fails.
-2. Configure ten real halls using the booking-item classification and confirm that every published rate sheet can be represented without hidden mandatory charges.
-3. Interview at least three vendors in each proposed MVP category about packages, availability, margins, cancellation, travel, insurance, and acceptable commission structure.
-4. Test the dynamic questionnaire with at least six event briefs: children’s birthday, adult celebration, wedding reception, business workshop, memorial, and fundraiser.
-5. Recruit a curated launch group and rehearse fulfilment with monitored test-mode or shadow operations before accepting live customer money.
-6. Obtain a documented Canadian legal and CPA go/no-go on the supplier/agency, tax, invoicing, deposit, payment-regulation, and funds-flow model—and payment-provider approval of the connected-account design—before the first live pilot charge, transfer, or payout.
-7. In test mode, rehearse a venue-only and a multi-vendor event from quote through booking-time supplier invoices, payment, post-event adjustment, both a full deposit release and an approved deposit-funded supplemental venue invoice, Gather fee invoice, payout statement, transfer, bank payout, and reconciliation.
-8. Before the first live booking, provision the minimum production seller onboarding, payment webhook, invoice, immutable-ledger, separate transfer/bank-payout tracking, and daily reconciliation path; then run a controlled live pilot rather than manually treating a transfer as proof of seller payment.
-9. Measure attachment and contribution margin before treating vendor commissions as the platform’s only permanent revenue source.
+1. Interview five community associations about their allowed, approval-required, and prohibited uses; outside-vendor rules; preferred suppliers; required fees; insurance; cleanup; and responsibility when a vendor fails.
+2. Configure ten real halls using the booking-item classification and purpose-policy matrix; confirm that every published rate sheet can be represented without hidden mandatory charges.
+3. Run the prototype with at least six briefs—children’s birthday, adult celebration, wedding reception, business workshop, memorial, and fundraiser. For each, verify the fit status, included/required/recommended/general separation, and that no optional paid item is preselected.
+4. Select a provider in one category, visit another category, and return; valid selections must persist. Change attendance or a material activity answer; all retained items must revalidate and any invalid item must remain visible for correction.
+5. Test **Other / not sure**, **Venue approval required**, and **Not offered**. General compatible options may remain browsable, but approval-required uses must lose Instant Book and payment access, while prohibited uses must require another purpose or venue.
+6. Interview at least three vendors in each proposed MVP category about packages, availability, margins, cancellation, travel, insurance, and acceptable commission structure.
+7. Recruit a curated launch group and rehearse fulfilment with monitored test-mode or shadow operations before accepting live customer money.
+8. Obtain a documented Canadian legal and CPA go/no-go on the supplier/agency, tax, invoicing, deposit, payment-regulation, and funds-flow model—and payment-provider approval of the connected-account design—before the first live pilot charge, transfer, or payout.
+9. In test mode, rehearse a venue-only and a multi-vendor event from quote through booking-time supplier invoices, payment, post-event adjustment, both a full deposit release and an approved deposit-funded supplemental venue invoice, Gather fee invoice, payout statement, transfer, bank payout, and reconciliation.
+10. Before the first live booking, provision the minimum production seller onboarding, payment webhook, invoice, immutable-ledger, separate transfer/bank-payout tracking, and daily reconciliation path; then run a controlled live pilot rather than manually treating a transfer as proof of seller payment.
+11. Measure attachment and contribution margin before treating vendor commissions as the platform’s only permanent revenue source.

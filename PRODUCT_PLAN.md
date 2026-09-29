@@ -84,17 +84,19 @@ Use these terms consistently in the interface, documentation, emails, and databa
 - The database prevents overlapping active holds and bookings for the same blocked interval.
 - Once confirmed, the interval is removed from availability immediately.
 
-If approval-required inventory is introduced later, it should use a separate **Request approval** label and filter. It should not be mixed into the default Instant Book results.
+A space may support Instant Book for one purpose and require approval or prohibit another. As soon as the organizer selects a purpose and relevant activities, recompute the promise from the venue's configured policy. An approval-required use must replace the Instant Book message and payment action with a clear **Venue approval required** state; a prohibited or unsupported use must require a different purpose or space. Neither state may inherit a generic Instant Book badge merely because the date and room are available. A complete request-and-approval workflow can be staged separately, but the checkout must already fail closed when approval is required.
 
 ### 2. Venue add-ons have real availability
 
 Each listing separates:
 
 - **Included amenities:** available with every booking at no additional charge.
+- **Required items:** paid venue resources or fees automatically triggered by the organizer's answers, displayed with the rule and reason and included in the price before payment.
+- **Recommended venue options:** relevant optional items prioritized for the selected purpose but never preselected.
 - **Available venue add-ons:** optional paid items or services supplied by the venue that can be selected at checkout.
 - **Unavailable items:** either hidden or clearly disabled with a reason.
 
-A venue add-on can depend on date, time, quantity, staff availability, equipment inventory, or event type. An Instant Book listing must only offer it when the operator can fulfil it. Shared equipment and limited staff must be reserved atomically with the space. Independent vendor services follow their own availability, quote, order, and cancellation workflow.
+A venue add-on can depend on date, time, quantity, staff availability, equipment inventory, purpose, or activity answer. The venue's policy and inventory are authoritative; a recommendation never makes an activity permissible. An Instant Book listing must only offer an item when the operator can fulfil it. Shared equipment and limited staff must be reserved atomically with the space. Independent vendor services follow their own availability, quote, order, and cancellation workflow.
 
 ### 3. Pricing is complete before payment
 
@@ -125,7 +127,15 @@ Every cost or task must be classified as one of:
 
 Search-result comparisons use the required venue cost for the organizer's event answers, not only a base hourly rate. Optional third-party services are shown separately and never included in the venue total until selected.
 
-The booking questionnaire must use the selected event type and follow-up answers to generate relevant requirements. It should cover public versus private access, attendance, paid admission, alcohol, food preparation or sales, music and dancing, noise and event times, raffle/gaming, fire-risk activities, temporary structures, animals, inflatables, personal services, outside vendors, accessibility needs, insurance, setup, cleanup, and recurrence.
+The booking questionnaire must use the selected purpose and follow-up answers to generate relevant requirements and recommendations. Broad purpose choices should use organizer language—celebration, meeting or workshop, class or program, wedding or reception, sport or recreation, performance or public event, community gathering, and **Other / not sure**—rather than requiring the organizer to know the venue's internal room type. It should cover public versus private access, attendance, paid admission, alcohol, food preparation or sales, music and dancing, noise and event times, raffle/gaming, fire-risk activities, temporary structures, animals, inflatables, personal services, outside vendors, accessibility needs, insurance, setup, cleanup, and recurrence.
+
+Each venue owns a purpose-policy matrix with three explicit outcomes:
+
+- **Allowed:** the purpose can remain Instant Book if availability, requirements, and payment checks also pass.
+- **Approval required:** compatible options may be explored, but the interface must stop claiming Instant Book and must block payment until an authorized venue decision is recorded.
+- **Prohibited / not offered:** the organizer must change the purpose or choose another space; recommendations cannot override the policy.
+
+**Other / not sure** is a safe fallback, not an automatic rejection. Ask for a plain-language description and show the general catalogue of facility-compatible options, but route the use to venue review until it is classified. This lets an organizer discover options without misrepresenting approval or availability.
 
 Each generated requirement records its source—law/regulator, venue policy, vendor condition, or recommendation—plus the responsible party, due date, evidence, cost type, reviewer, and status. Legal or venue requirements must never be disguised as marketplace upsells.
 
@@ -139,8 +149,11 @@ Each generated requirement records its source—law/regulator, venue policy, ven
 - Vendor services support fixed packages, quote-required services, or referral/concierge flows.
 - If the venue booking changes or is cancelled, every linked vendor order receives an explicit impact assessment; it is not silently cancelled or refunded under the venue's policy.
 - Organizers compare competing packages within a specific service need rather than seeing one undifferentiated add-on. Each result shows the supplier, scope, availability, total or pricing basis, rating and verified-review count, guest capacity, lead time, service area, venue compatibility, cancellation terms, and the exact reason when it cannot be booked.
+- Start with compact service-category cards: show recommended and already-selected categories first, then provide a visible **Browse all compatible services** action. Opening a category reveals its competing provider packages; returning to the category list preserves choices made elsewhere. This reduces one long add-on wall without hiding general options the facility permits.
+- Purpose-based recommendations are guidance only. Every optional paid venue item and vendor package starts unselected, and organic ordering is based on booking fit rather than platform commission.
 - Unavailable packages remain visible by default so an organizer can understand price, availability, quality, and scope trade-offs. They are never selectable or included in totals. Sorting and recommendation use booking fit, availability, quality, price, response, and reliability—not Gather commission.
 - A mutually exclusive service need, such as catering, permits at most one selected provider package. Complementary needs, such as a magic show and face painting, may be selected together. Changing the venue, date, time, attendance, or relevant event answers reruns compatibility for every retained selection and never silently removes or bills an invalid package.
+- Revalidation preserves every still-valid selection and its configuration. A retained item that no longer fits becomes **Needs attention** with the exact failed rule; the organizer must replace or remove it before payment. The system must not silently drop it, silently substitute another supplier, or continue charging for an invalid selection.
 - Catering comparison includes cuisine, guest-dependent pricing, minimum order, capacity, dietary support, allergy/cross-contact review capability, serving style, menu scope, service staff or tableware, delivery/setup window, facility requirements, service area, and lead time. “Gluten-aware,” “nut-aware,” or an allergy-review capability is a vendor-reported accommodation—not an allergen-free guarantee—and material allergy requirements require explicit vendor confirmation.
 - Ratings displayed as verified reviews must come from completed platform orders. New providers show **New / no reviews**, not a zero-star score. Sponsored placement must be labelled and must not be blended into organic best-match ranking.
 
@@ -294,9 +307,10 @@ Keep the first build narrow. The pilot should prove that accurate inventory can 
 - Listing pages with photos, capacity, accessibility, included amenities, add-ons, venue rules, cancellation terms, optional security-deposit terms, and live availability.
 - Short checkout hold.
 - Event details and eligibility questions.
-- Event-type-driven required-fee and compliance checklist.
-- Add-on selection with availability and quantity rules.
-- Optional compatible event-service suggestions shown separately from required venue charges.
+- Purpose and activity selection with venue-policy status shown as allowed, approval-required, or prohibited / not offered.
+- Purpose-driven required-fee and compliance checklist, with included, required, recommended, and other compatible items clearly separated.
+- Staged add-on selection with fit, availability, quantity, and revalidation rules; optional paid items are never preselected.
+- Compact category-first event-service suggestions shown separately from required venue charges, with a general **Browse all compatible services** fallback.
 - Full price breakdown and policy acceptance.
 - Secure card or digital-wallet checkout.
 - Clear pages for payment processing, booking confirmation, payment failure, cancellation, completion, and refunds.
@@ -336,7 +350,7 @@ Keep the first build narrow. The pilot should prove that accurate inventory can 
 
 ### Defer until the pilot proves demand
 
-- Approval-required listings and inquiry workflows.
+- Full approval-request processing, staff decision, and inquiry messaging beyond the fail-closed approval state demonstrated in checkout.
 - Recurring bookings, waitlists, competitive bidding, discount codes, and loyalty features.
 - Unrestricted vendor self-registration and automated complex vendor bundles; the pilot may use curated, manually supported service packages.
 - Native mobile apps.
@@ -429,8 +443,9 @@ Do not claim that Communal currently provides the required API until its current
 
 ### Phase 2 — Instant Book checkout
 
-- Search, availability-filtered results, listing page, checkout holds, event questions, add-ons, price snapshots, policy acceptance, and card checkout in test mode.
+- Search, availability-filtered results, listing page, checkout holds, purpose and activity questions, venue-policy fit, staged add-on selection, compact category-first provider comparison, price snapshots, policy acceptance, and card checkout in test mode.
 - Calculate event-specific required venue fees and produce the conditional requirement checklist before payment.
+- Revalidate purpose, venue policy, availability, required resources, and every retained provider selection before payment. Preserve valid choices, flag invalid choices for correction, and remove the Instant Book promise whenever approval is required.
 - Verified payment webhooks, booking confirmation, one supplier invoice for every supplier amount due or paid, payment allocation and receipt, and `.ics` calendar invitation. These booking-time invoices are Phase 2 checkout outputs; Phase 3 adds post-event and operator document workflows rather than deferring the original invoices.
 
 **Exit:** in test mode, a customer can complete a booking without staff intervention, each paid supplier invoice and the payment receipt are generated from the verified payment event, and payment failure or checkout expiry releases inventory correctly.
