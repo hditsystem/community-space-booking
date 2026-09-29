@@ -3,7 +3,7 @@ const gatherTaxProfile = { id: "TAX-GATHER-CA", label: "GST · Gather sample pro
 
 const spaces = [
   {
-    id: "ridgeview", name: "Ridgeview Community Hall", operator: "Ridgeview Community Association", invoicePrefix: "RCA", area: "Northwest Calgary", category: "Community hall", price: 48, capacity: 120, deposit: 300, image: "hall-img",
+    id: "ridgeview", name: "Ridgeview Community Hall", operator: "Ridgeview Community Association", invoicePrefix: "RCA", area: "Northwest Calgary", category: "Community hall", price: 48, capacity: 120, deposit: 300, rating: 4.7, reviewCount: 86, image: "hall-img",
     amenities: ["Kitchen add-on", "Step-free", "120 attendees"], highlights: ["♿ Step-free access", "▣ Add-ons available", "Ⓟ Free parking"], busy: [{ date: "2026-10-17", start: 14, end: 17 }],
     descriptionTitle: "A bright, flexible hall for celebrations and community events",
     description: "Host a celebration, workshop, class, or community meeting in a warm, versatile room. Tables and chairs are included, and commercial-kitchen access can be added at checkout.",
@@ -18,7 +18,7 @@ const spaces = [
     ]
   },
   {
-    id: "crestwood", name: "Crestwood Community Rink", operator: "Crestwood Community Association", invoicePrefix: "CCA", area: "Southwest Calgary", category: "Rink and court", price: 36, capacity: 60, deposit: 150, image: "rink-img",
+    id: "crestwood", name: "Crestwood Community Rink", operator: "Crestwood Community Association", invoicePrefix: "CCA", area: "Southwest Calgary", category: "Rink and court", price: 36, capacity: 60, deposit: 150, rating: 4.6, reviewCount: 42, image: "rink-img",
     amenities: ["Change rooms", "Free parking", "60 attendees"], highlights: ["▣ Two change rooms", "◈ Equipment add-ons", "Ⓟ Free parking"], busy: [{ date: "2026-10-17", start: 9, end: 12 }],
     descriptionTitle: "An indoor rink for practices, games, and active events",
     description: "Book the rink for team practices, recreation sessions, or small tournaments. Standard nets, player benches, and two change rooms are included in the hourly rate.",
@@ -33,7 +33,7 @@ const spaces = [
     ]
   },
   {
-    id: "sunroom", name: "The Sunroom", operator: "The Sunroom Calgary Ltd.", invoicePrefix: "SUN", area: "Bridgeland", category: "Meeting room", price: 29, capacity: 24, deposit: 0, image: "meeting-img",
+    id: "sunroom", name: "The Sunroom", operator: "The Sunroom Calgary Ltd.", invoicePrefix: "SUN", area: "Bridgeland", category: "Meeting room", price: 29, capacity: 24, deposit: 0, rating: 4.9, reviewCount: 31, image: "meeting-img",
     amenities: ["Projector included", "Wi-Fi", "24 attendees"], highlights: ["▣ Projector included", "⌁ High-speed Wi-Fi", "♿ Accessible washroom"], busy: [],
     descriptionTitle: "A light-filled room for meetings, workshops, and small classes",
     description: "A quiet, professional space with flexible seating, fast Wi-Fi, a whiteboard, and a projector included in the hourly rate.",
@@ -48,7 +48,7 @@ const spaces = [
     ]
   },
   {
-    id: "oak", name: "Oak & Elm Hall", operator: "Oak & Elm Events Ltd.", invoicePrefix: "OEH", area: "Southeast Calgary", category: "Event hall", price: 54, capacity: 150, deposit: 400, image: "hall-img",
+    id: "oak", name: "Oak & Elm Hall", operator: "Oak & Elm Events Ltd.", invoicePrefix: "OEH", area: "Southeast Calgary", category: "Event hall", price: 54, capacity: 150, deposit: 400, rating: 4.5, reviewCount: 73, image: "hall-img",
     amenities: ["Stage included", "Kitchen add-on", "150 attendees"], highlights: ["▱ Built-in stage", "♿ Accessible entrance", "Ⓟ Free parking"], busy: [{ date: "2026-10-17", start: 18, end: 20 }],
     descriptionTitle: "A spacious event hall with a stage and flexible floor plan",
     description: "Plan a reception, fundraiser, performance, or large workshop with a built-in stage, flexible seating, and optional kitchen and AV services.",
@@ -158,6 +158,28 @@ const financeDemo = {
   deposit: 300
 };
 
+const completedReviewBooking = {
+  bookingId: financeDemo.bookingId,
+  ownerRoleId: "customer-organizer",
+  status: "completed",
+  completedMonth: "September 2026",
+  reviewDeadline: "October 21, 2026",
+  reviewDeadlineAt: "2026-10-21T23:59:59-06:00",
+  eventType: "Wedding reception",
+  venue: { subjectType: "space", subjectId: "ridgeview", name: "Ridgeview Community Hall", status: "completed" },
+  vendorOrders: [
+    { orderId: "VOR-WSE-1033", subjectType: "vendor-service", subjectId: "magic-wonderspark", vendor: "WonderSpark Entertainment", offering: "Family magic show", status: "fulfilled" }
+  ]
+};
+
+const samplePublicReviews = [
+  { id: "REV-SAMPLE-RIDGE-1", subjectType: "space", subjectId: "ridgeview", rating: 5, reviewer: "Amanda R.", verified: true, eventType: "Family celebration", month: "August 2026", comment: "The hall matched the listing, access instructions were clear, and the room was ready when we arrived.", highlights: ["Accurate listing", "Ready and clean", "Easy access"] },
+  { id: "REV-SAMPLE-WSE-1", subjectType: "vendor-service", subjectId: "magic-wonderspark", rating: 5, reviewer: "Daniel K.", verified: true, eventType: "Birthday celebration", month: "August 2026", package: "Family magic show", comment: "WonderSpark arrived on time and kept children and adults engaged throughout the show.", highlights: ["Matched the package", "On time", "Professional"] }
+];
+
+let organizerReviews = {};
+let reviewEditingTarget = null;
+
 const accountContexts = [
   { id: "customer", label: "Customer account", icon: "◎", description: "The organizer who searches, books, pays, receives documents, and responds to post-event matters." },
   { id: "venue", label: "Space-operator organization", icon: "▱", description: "The business or association that publishes and operates one or more rentable spaces." },
@@ -169,10 +191,10 @@ const demoRoles = [
   {
     id: "customer-organizer", accountType: "customer", role: "Organizer / booking owner", shortRole: "Organizer", name: "Priya Shah", initials: "PS", organization: "Personal booking account", landing: "customer-dashboard", workspaceLabel: "Open My bookings",
     summary: "Books the space and optional vendor services, pays, receives customer documents, and manages the booking.",
-    permissionKeys: ["customer.booking.manage", "customer.documents.view", "customer.deposit.respond", "customer.messages"],
-    permissions: ["Search and complete Instant Book checkout", "View customer invoices, receipts, statements, and deposit status", "Request permitted changes or cancellation", "Respond to a documented deposit claim"],
+    permissionKeys: ["customer.booking.manage", "customer.documents.view", "customer.deposit.respond", "customer.reviews.create", "customer.messages"],
+    permissions: ["Search and complete Instant Book checkout", "View customer invoices, receipts, statements, and deposit status", "Request permitted changes or cancellation", "Review each completed venue and fulfilled vendor order", "Respond to a documented deposit claim"],
     restrictions: ["Cannot see venue or vendor private payouts", "Cannot change availability, commercial policy, or supplier records"],
-    routes: ["customer-dashboard", "customer-documents", "customer-deposit", "interim-statement", "final-statement"]
+    routes: ["customer-dashboard", "customer-documents", "customer-deposit", "customer-reviews", "interim-statement", "final-statement"]
   },
   {
     id: "venue-admin", accountType: "venue", role: "Owner / account administrator", shortRole: "Venue admin", name: "Jamie Morales", initials: "JM", organization: "Ridgeview Community Association", landing: "dashboard", workspaceLabel: "Open venue dashboard",
@@ -241,16 +263,16 @@ const demoRoles = [
   {
     id: "platform-admin", accountType: "platform", role: "Platform administrator · super admin", shortRole: "Platform admin", name: "Taylor Chen", initials: "TC", organization: "Gather", landing: "platform-dashboard", workspaceLabel: "Open super-admin console",
     summary: "Oversees organizations, access policy, marketplace activity, financial health, audit history, and controlled support access.",
-    permissionKeys: ["platform.access", "platform.policy", "platform.marketplace", "platform.support", "platform.support.session", "platform.finance", "platform.audit"],
-    permissions: ["Administer tenants, memberships, roles, and global controls", "Review cross-organization bookings, vendor orders, deposits, and settlement health", "Create future commercial-policy versions", "Start reason-coded, expiring read-only support sessions and review audit history"],
+    permissionKeys: ["platform.access", "platform.policy", "platform.marketplace", "platform.reviews.moderate", "platform.support", "platform.support.session", "platform.finance", "platform.audit"],
+    permissions: ["Administer tenants, memberships, roles, and global controls", "Review cross-organization bookings, vendor orders, deposits, and settlement health", "Moderate reported reviews under published content rules", "Create future commercial-policy versions", "Start reason-coded, expiring read-only support sessions and review audit history"],
     restrictions: ["Support access must still be time-limited and reason-coded", "Cannot silently rewrite an existing booking’s snapshotted terms"],
     routes: ["platform-dashboard", "fee-settings"]
   },
   {
     id: "platform-ops", accountType: "platform", role: "Marketplace operations / support", shortRole: "Platform ops", name: "Noor Ahmed", initials: "NA", organization: "Gather", landing: "platform-dashboard", workspaceLabel: "Open operations console",
     summary: "Handles seller onboarding, listing moderation, credential review, support, and exception queues.",
-    permissionKeys: ["platform.marketplace", "platform.support"],
-    permissions: ["Review operator and vendor onboarding", "Moderate listings and category credentials", "Manage support and synchronization exceptions", "Request or escalate controlled support access"],
+    permissionKeys: ["platform.marketplace", "platform.reviews.moderate", "platform.support"],
+    permissions: ["Review operator and vendor onboarding", "Moderate listings, reported reviews, and category credentials", "Manage support and synchronization exceptions", "Request or escalate controlled support access"],
     restrictions: ["Cannot change fee policy or approve platform money movement", "Cannot expose full bank, tax, or payment credentials"],
     routes: ["platform-dashboard"]
   },
@@ -285,6 +307,7 @@ const routeLabels = {
   "customer-dashboard": "My bookings",
   "customer-documents": "Customer booking documents",
   "customer-deposit": "Customer deposit response",
+  "customer-reviews": "Organizer reviews",
   dashboard: "Venue overview",
   settlement: "Event closeout",
   deposit: "Security-deposit closeout",
@@ -308,6 +331,51 @@ const deductionAmount = value => value ? `−${moneyExact(value)}` : moneyExact(
 const cadMoney = value => money(value).replace("$", "CA$");
 const escapeHtml = value => String(value).replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 const formatSupportTimestamp = value => new Date(value).toLocaleString("en-CA", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+function reviewTargetsForBooking() {
+  const targets = [];
+  if (completedReviewBooking.status === "completed" && completedReviewBooking.venue.status === "completed") {
+    targets.push({ ...completedReviewBooking.venue, targetType: "venue", supplier: financeDemo.venueSupplier, offering: "Venue rental", criteria: ["Accurate listing", "Ready and clean", "Easy access", "Good communication", "Good value"] });
+  }
+  completedReviewBooking.vendorOrders.filter(order => order.status === "fulfilled").forEach(order => {
+    targets.push({ ...order, targetType: "vendor", supplier: order.vendor, name: order.vendor, criteria: ["Matched the package", "On time", "Professional", "Good communication", "Good value"] });
+  });
+  return targets;
+}
+
+const reviewKey = target => `${completedReviewBooking.bookingId}:${target.subjectType}:${target.orderId || target.subjectId}`;
+const reviewWindowOpen = () => Date.now() <= new Date(completedReviewBooking.reviewDeadlineAt).getTime();
+const isBookingReviewOwner = () => activeRole()?.id === completedReviewBooking.ownerRoleId;
+const canSubmitReviewFor = target => reviewWindowOpen() && isBookingReviewOwner() && hasPermission("customer.reviews.create") && reviewTargetsForBooking().some(item => reviewKey(item) === reviewKey(target));
+const submittedReviews = () => Object.values(organizerReviews).filter(review => review.status === "published" && review.verified === true);
+
+function reviewSummaryFor(subjectType, subjectId, baseRating = 0, baseCount = 0) {
+  const additions = submittedReviews().filter(review => review.subjectType === subjectType && review.subjectId === subjectId);
+  const count = baseCount + additions.length;
+  const ratingTotal = baseRating * baseCount + additions.reduce((sum, review) => sum + review.rating, 0);
+  return { rating: count ? ratingTotal / count : null, count };
+}
+
+const spaceReviewSummary = space => reviewSummaryFor("space", space.id, space.rating || 0, space.reviewCount || 0);
+const vendorReviewSummary = service => reviewSummaryFor("vendor-service", service.id, service.rating || 0, service.reviewCount || 0);
+
+function publicReviewsFor(subjectType, subjectId) {
+  const created = submittedReviews().filter(review => review.subjectType === subjectType && review.subjectId === subjectId);
+  return [...created, ...samplePublicReviews.filter(review => review.verified === true && review.subjectType === subjectType && review.subjectId === subjectId)];
+}
+
+function publicReviewCard(review, compact = false) {
+  const stars = "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
+  const packageLabel = review.package ? ` · ${escapeHtml(review.package)}` : "";
+  const openingTag = compact ? '<span class="public-review-card compact" aria-hidden="true">' : '<article class="public-review-card">';
+  const closingTag = compact ? "</span>" : "</article>";
+  const reviewFooter = compact ? `<span class="public-review-footer"><strong>${escapeHtml(review.reviewer)}</strong><span>${escapeHtml(review.eventType)} · ${escapeHtml(review.month)}${packageLabel}${review.edited ? " · Edited" : ""}</span></span>` : `<footer><strong>${escapeHtml(review.reviewer)}</strong><span>${escapeHtml(review.eventType)} · ${escapeHtml(review.month)}${packageLabel}${review.edited ? " · Edited" : ""}</span></footer>`;
+  return `${openingTag}<span class="public-review-head"><span class="review-stars" aria-label="${review.rating} out of 5">${stars}</span>${review.verified === true ? '<span class="verified-review">✓ Verified booking</span>' : ""}</span>${review.comment ? `<span class="public-review-comment">“${escapeHtml(review.comment)}”</span>` : ""}${review.highlights?.length ? `<span class="review-highlights">${review.highlights.map(item => `<span>${escapeHtml(item)}</span>`).join("")}</span>` : ""}${reviewFooter}${closingTag}`;
+}
+
+function reviewSummaryText(summary) {
+  return summary.count ? `${summary.rating.toFixed(1)} · ${summary.count} verified review${summary.count === 1 ? "" : "s"}` : "New · no reviews";
+}
 
 function scheduleSupportExpiry() {
   if (supportExpiryTimer) clearTimeout(supportExpiryTimer);
@@ -426,9 +494,11 @@ function vendorMatchesCateringPreferences(service) {
 function sortedVendorServices(services) {
   return [...services].sort((a, b) => {
     const availabilityDifference = Number(vendorAvailability(b).available) - Number(vendorAvailability(a).available);
+    const aReviews = vendorReviewSummary(a);
+    const bReviews = vendorReviewSummary(b);
     if (vendorSort === "price") return servicePrice(a) - servicePrice(b) || availabilityDifference;
-    if (vendorSort === "rating") return b.rating - a.rating || b.reviewCount - a.reviewCount;
-    return availabilityDifference || b.rating - a.rating || servicePrice(a) - servicePrice(b);
+    if (vendorSort === "rating") return (bReviews.rating || 0) - (aReviews.rating || 0) || bReviews.count - aReviews.count;
+    return availabilityDifference || (bReviews.rating || 0) - (aReviews.rating || 0) || bReviews.count - aReviews.count || servicePrice(a) - servicePrice(b);
   });
 }
 
@@ -574,9 +644,10 @@ function showToast(message) {
 }
 
 function spaceCard(space) {
+  const reviews = spaceReviewSummary(space);
   return `<button class="space-card" data-space="${space.id}" aria-label="View ${space.name}">
     <div class="card-image ${space.image}"><span class="card-tag">${space.category}</span><span class="availability-badge">⚡ Instant Book · ${formatTime(bookingData.start)}–${formatTime(bookingData.end)}</span></div>
-    <div class="card-body"><div class="card-topline"><div><h3>${space.name}</h3><p>${space.area}</p></div><div class="price"><strong>${money(space.price)}</strong><br><small>per hour</small></div></div>
+    <div class="card-body"><div class="card-topline"><div><h3>${space.name}</h3><p>${space.area}</p><span class="space-review-summary"><span aria-hidden="true">★</span> ${reviewSummaryText(reviews)}</span></div><div class="price"><strong>${money(space.price)}</strong><br><small>per hour</small></div></div>
     <div class="amenities">${space.amenities.map(item => `<span>${item}</span>`).join("")}</div></div>
   </button>`;
 }
@@ -613,6 +684,8 @@ function explorePage() {
 
 function venuePage() {
   const space = currentSpace();
+  const venueReviews = spaceReviewSummary(space);
+  const venueReviewCards = publicReviewsFor("space", space.id).slice(0, 2);
   const totals = pricing();
   const slot = availability();
   const vendorPreviews = vendorServiceTypes.map(type => {
@@ -620,20 +693,21 @@ function venuePage() {
     const available = offerings.filter(service => vendorAvailability(service).available);
     if (!offerings.length) return "";
     const lowestAvailable = available.length ? Math.min(...available.map(servicePrice)) : null;
-    const topRating = Math.max(...offerings.map(service => service.rating));
+    const topRating = Math.max(...offerings.map(service => vendorReviewSummary(service).rating || 0));
     return `<div class="addon-preview vendor-preview"><div><span class="vendor-category">${type.label}</span><strong>${offerings.length} provider option${offerings.length === 1 ? "" : "s"}</strong><small>${available.length} available now · ratings up to ${topRating.toFixed(1)}</small></div><span>${lowestAvailable === null ? "Compare" : `from ${money(lowestAvailable)}`}</span></div>`;
   }).filter(Boolean).join("");
   const selectedDate = new Date(bookingData.date + "T12:00:00").toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric" });
   const busySlots = space.busy.filter(block => block.date === bookingData.date).map(block => `<span class="slot booked">Booked · ${formatHour(block.start)}–${formatHour(block.end)}</span>`).join("");
   const canStartBooking = !activeRole() || activeRole().accountType === "customer";
   return `<div class="venue-wrap"><div class="venue-gallery ${space.image}"><div class="window one"></div><div class="window two"></div><div class="table"></div><span class="gallery-pill">▦ View sample gallery</span></div>
-    <div class="venue-content"><div><div class="venue-title"><span class="eyebrow">${space.category}</span><h1>${space.name}</h1><p class="venue-meta">${space.area} · ⚡ Instant Book</p></div>
+    <div class="venue-content"><div><div class="venue-title"><span class="eyebrow">${space.category}</span><h1>${space.name}</h1><p class="venue-meta">${space.area} · ⚡ Instant Book · <span class="rating"><span aria-hidden="true">★</span> ${reviewSummaryText(venueReviews)}</span></p></div>
       <div class="feature-row"><span>♙ Capacity: ${space.capacity} attendees</span>${space.highlights.map(item => `<span>${item}</span>`).join("")}</div>
       <div class="content-block"><h3>${space.descriptionTitle}</h3><p>${space.description}</p></div>
       <div class="content-block"><h3>Availability for ${selectedDate}</h3><div class="slot-row"><span class="slot available">Booking hours: 8:00 AM–11:00 PM</span>${busySlots}<span class="slot ${slot.available ? "selected" : "booked"}">${slot.available ? "✓ Available" : "Not available"} · ${formatTime(bookingData.start)}–${formatTime(bookingData.end)}</span></div><p class="block-note">Booked periods are unavailable. Your selected time must include setup and cleanup.</p></div>
       <div class="content-block"><h3>Included in the hourly rate</h3><div class="amenities included">${space.included.map(item => `<span>✓ ${item}</span>`).join("")}</div></div>
       <div class="content-block"><h3>Available add-ons</h3><p>Select available add-ons at checkout.</p><div class="addon-preview-grid">${currentAddons().filter(item => item.available).slice(0, 4).map(item => `<div class="addon-preview"><div><strong>${item.name}</strong><small>${item.description}</small></div><span>+${money(item.price)}</span></div>`).join("")}</div></div>
       <div class="content-block"><h3>Compare optional services from local vendors</h3><p>Compare providers by package, availability, total price, rating, reviews, capacity, and fit before selecting an offering at checkout.</p><div class="addon-preview-grid">${vendorPreviews}</div><p class="block-note">Unavailable options remain visible during comparison. Vendor availability and compatibility are rechecked before payment. Sample ratings and reviews are fictional prototype data.</p></div>
+      <div class="content-block venue-reviews"><div class="review-section-head"><div><h3>Verified organizer reviews</h3><p><strong>${venueReviews.rating?.toFixed(1) || "New"}</strong> from ${venueReviews.count} completed booking${venueReviews.count === 1 ? "" : "s"}. Reviews are supplier-specific and never require venue approval.</p></div><span class="verified-review">✓ Completed bookings only</span></div>${venueReviewCards.length ? `<div class="public-review-grid">${venueReviewCards.map(review => publicReviewCard(review)).join("")}</div>` : `<p>No published reviews yet.</p>`}<p class="block-note">Names, dates, booking details, and private issues are minimized. All review content shown in this prototype is fictional.</p></div>
       <div class="content-block"><h3>Venue rules</h3><p>${space.rules} Setup and cleanup must be completed within your booked time.</p></div>
       <div class="content-block"><h3>Refundable security deposit</h3>${space.deposit ? `<p><strong>${money(space.deposit)} is required for this sample booking.</strong> It is shown separately and collected at checkout.</p><div class="deposit-steps"><div><span>1</span><strong>Before the event</strong><small>The amount and deposit policy are accepted at checkout.</small></div><div><span>2</span><strong>After the event</strong><small>The venue team records the inspection within its configured deadline.</small></div><div><span>3</span><strong>Release or documented claim</strong><small>No issue: the full refund is initiated. Any claim requires an itemized reason and evidence.</small></div></div><p class="block-note">Refund timing after release depends on the payment provider and the customer’s bank. This is a sample policy for prototype review.</p>` : `<p><strong>No security deposit is required for this sample listing.</strong> No deposit is added at checkout and no post-event release task is created.</p>`}</div>
     </div>
@@ -657,13 +731,15 @@ function eventForm() { return `<div class="booking-panel"><div class="form-card"
 function vendorOfferCard(item) {
   const status = vendorAvailability(item);
   const selected = bookingData.vendorServices.includes(item.id);
+  const reviews = vendorReviewSummary(item);
+  const recentReview = publicReviewsFor("vendor-service", item.id)[0];
   const cateringDetails = item.serviceType === "catering" ? `<div class="offer-tags">${item.cuisines.map(value => `<span>${value}</span>`).join("")}${item.menuStyles.map(value => `<span>Menu: ${value}</span>`).join("")}${item.servingStyles.map(value => `<span>${value}</span>`).join("")}${item.dietary.map(value => `<span>${value}</span>`).join("")}</div><p class="allergen-note"><strong>Allergy handling:</strong> ${item.allergenNote}</p><small class="delivery-window">Delivery/setup: ${item.deliveryWindow}</small>` : "";
   const statusHeading = !status.available ? "Unavailable for this booking" : status.confirmationRequested ? "Vendor response pending" : status.requiresConfirmation ? "Vendor confirmation required" : status.confirmed ? "✓ Vendor-confirmed for these requirements" : "✓ Available and compatible";
   return `<label class="vendor-offer-card ${status.available ? "available" : "unavailable"} ${status.requiresConfirmation ? "confirmation-required" : ""} ${selected ? "selected" : ""}">
     <input class="vendor-radio" type="radio" name="vendor-${item.serviceType}" value="${item.id}" data-service-type="${item.serviceType}" ${selected ? "checked" : ""} ${status.available ? "" : "disabled"}>
     <span class="offer-card-content"><span class="offer-card-top"><span><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${item.name}</strong><small>${item.vendor}</small></span><span class="offer-price"><strong>${money(servicePrice(item))}</strong><small>${servicePriceBreakdown(item)}</small></span></span>
-    <span class="offer-rating" aria-label="${item.rating} out of 5 from ${item.reviewCount} verified prototype bookings"><span aria-hidden="true">★</span> ${item.rating.toFixed(1)} <small>(${item.reviewCount} verified reviews)</small></span>
-    <span class="offer-description">${item.description}</span><span class="offer-inclusions">${item.inclusions.map(value => `<span>✓ ${value}</span>`).join("")}</span>
+    <span class="offer-rating" aria-label="${reviews.rating?.toFixed(1) || "New"} out of 5 from ${reviews.count} verified prototype bookings"><span aria-hidden="true">★</span> ${reviews.rating?.toFixed(1) || "New"} <small>(${reviews.count} verified review${reviews.count === 1 ? "" : "s"})</small></span>
+    <span class="offer-description">${item.description}</span>${recentReview ? publicReviewCard(recentReview, true) : ""}<span class="offer-inclusions">${item.inclusions.map(value => `<span>✓ ${value}</span>`).join("")}</span>
     <span class="offer-facts"><span>Capacity: ${item.minGuests}–${item.maxGuests}; requested ${serviceQuantity(item)}</span><span>Lead time: ${item.minLeadDays}+ days</span><span>Provider hold: ${formatTime(bookingData.start)}–${formatTime(bookingData.end)} · setup/teardown included</span></span>${cateringDetails}
     <span class="cancellation-summary"><strong>Cancellation & changes:</strong> ${cancellationPolicyFor(item)}</span>
     <span class="offer-status ${status.available ? status.requiresConfirmation ? "pending" : "" : "blocked"}"><strong>${statusHeading}</strong><small>${status.message}</small></span></span>
@@ -707,12 +783,13 @@ function reviewForm() {
   const vendorStatus = selectedVendorAvailability();
   const vendorReview = vendors.map(item => {
     const status = vendorAvailability(item);
+    const reviews = vendorReviewSummary(item);
     const subtotal = servicePrice(item);
     const supplierTax = taxFor(subtotal, item.taxProfile);
     const preferences = bookingData.cateringPreferences;
     const cateringConfiguration = item.serviceType === "catering" ? `<small>Catering request: ${preferences.cuisine === "any" ? "any listed cuisine" : preferences.cuisine} · ${preferences.menu === "any" ? "any listed menu" : preferences.menu} · ${preferences.servingStyle === "any" ? "any serving style" : preferences.servingStyle} · ${preferences.dietary.length ? preferences.dietary.join(", ") : "no dietary filter"}${preferences.allergies.length ? ` · allergy review: ${preferences.allergies.join(", ")}` : ""}</small>${preferences.notes ? `<small>Organizer note: ${escapeHtml(preferences.notes)}</small>` : ""}` : "";
     const quantityConfiguration = ["face-painting", "cake"].includes(item.serviceType) ? `<small>Selected quantity: ${serviceQuantity(item)} ${item.serviceType === "cake" ? "servings" : "participants"}</small>` : "";
-    return `<article class="review-vendor-order"><div><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${item.name}</strong><small>${item.vendor} · ${item.rating.toFixed(1)} ★ from ${item.reviewCount} verified prototype reviews</small>${item.pricing.type === "per_person" ? `<small>Pricing basis: ${servicePriceBreakdown(item)}</small>` : ""}${quantityConfiguration}${cateringConfiguration}<small><strong>Cancellation & changes:</strong> ${cancellationPolicyFor(item)}</small></div><div class="review-vendor-money"><span>${money(subtotal)}</span><small>${item.taxProfile.label}: ${money(supplierTax)}</small><strong>${money(subtotal + supplierTax)} supplier total</strong></div><span class="mini-status ${status.available && !status.requiresConfirmation ? "" : "pending"}">${status.available && !status.requiresConfirmation ? "✓" : "!"} ${status.message}</span></article>`;
+    return `<article class="review-vendor-order"><div><span class="vendor-category">${serviceTypeFor(item).label}</span><strong>${item.name}</strong><small>${item.vendor} · ${reviews.rating?.toFixed(1) || "New"} ★ from ${reviews.count} verified prototype reviews</small>${item.pricing.type === "per_person" ? `<small>Pricing basis: ${servicePriceBreakdown(item)}</small>` : ""}${quantityConfiguration}${cateringConfiguration}<small><strong>Cancellation & changes:</strong> ${cancellationPolicyFor(item)}</small></div><div class="review-vendor-money"><span>${money(subtotal)}</span><small>${item.taxProfile.label}: ${money(supplierTax)}</small><strong>${money(subtotal + supplierTax)} supplier total</strong></div><span class="mini-status ${status.available && !status.requiresConfirmation ? "" : "pending"}">${status.available && !status.requiresConfirmation ? "✓" : "!"} ${status.message}</span></article>`;
   }).join("");
   return `<div class="booking-panel"><div class="form-card"><h2>Review and pay</h2><p>${vendorStatus.ready ? "The venue and every selected vendor currently show available and compatible. Any disclosed allergy review has vendor confirmation. We’ll recheck all service windows once more when you confirm and pay." : "One or more selected vendor service is unavailable or still needs written confirmation. Return to provider comparison before payment."}</p><div class="content-block"><h3>Booking details</h3><p><strong>${bookingData.event}</strong><br>${bookingData.guests} attendees · ${formatTime(bookingData.start)}–${formatTime(bookingData.end)}</p></div><div class="content-block"><h3>Venue add-ons</h3><p>${selectedAddons.length ? selectedAddons.map(item => `✓ ${item.name}`).join("<br>") : "No venue add-ons selected."}</p></div><div class="content-block"><h3>Independent vendor orders</h3>${vendors.length ? vendorReview : "<p>No independent vendor services selected.</p>"}<p class="block-note">Each provider issues a separate supplier invoice. Package-specific cancellation summaries are shown above; Gather’s seller-funded commission is not added as a separate customer charge.</p></div><div class="content-block"><h3>Security deposit</h3><p>${totals.deposit ? `${money(totals.deposit)} is collected separately at checkout for this sample booking. After the event, the venue team follows its configured deadline to release it or submit an itemized claim with evidence.` : "No security deposit is required for this space."}</p></div><div class="payment-panel"><div><span class="secure-icon">🔒</span><strong>Payment details (prototype)</strong><small>Demo only — no card details are collected or processed.</small></div><div class="mock-card-field">Card number &nbsp; •••• •••• •••• 4242</div><div class="mock-card-row"><span>Expiry &nbsp; 12/29</span><span>CVC &nbsp; •••</span></div><p class="prototype-note">This interactive prototype does not create a charge or reservation.</p></div><label class="option terms"><span><input id="agree" type="checkbox" required> &nbsp; I reviewed and agree to the venue rules, the visible package-specific vendor cancellation/change terms, and the security-deposit policy when applicable.</span></label><div style="margin-top:24px"><button class="button button-light" id="booking-back">← Back</button> <button class="button button-green" id="confirm-booking" ${vendorStatus.ready ? "" : "disabled"}>${vendorStatus.ready ? `Confirm and pay ${cadMoney(totals.dueNow)}` : "Return to provider comparison"}</button></div></div>${summaryCard()}</div>`;
 }
@@ -812,7 +889,43 @@ function customerDashboardPage() {
   const deposit = depositStatus();
   const checkoutTotal = financeDemo.association.gross + financeDemo.vendor.gross + financeDemo.deposit;
   const documentCount = 4 + (hasIssuedSupplementalClaim() ? 1 : 0);
-  return `<section class="customer-dashboard"><div class="customer-dashboard-head"><div><span class="eyebrow">Customer account</span><h1>My bookings</h1><p>Welcome back, ${role.name}. Your supplier documents, payment receipt, event requirements, and deposit record stay together without exposing seller-private settlement details.</p></div><div class="avatar large">${role.initials}</div></div>${roleContextNotice()}<div class="customer-metrics"><div><span>Recent bookings</span><strong>1 booking</strong><small>${financeDemo.eventDate}</small></div><div><span>Documents</span><strong>${documentCount} available</strong><small>${hasIssuedSupplementalClaim() ? "Includes approved supplemental invoice" : "Invoices, receipt + account statement"}</small></div><div><span>Security deposit</span><strong>${money(financeDemo.deposit)}</strong><small>${deposit.label} · separate record</small></div></div><article class="customer-booking-card"><div class="customer-booking-title"><div><span class="account-badge">Completed · ${financeDemo.bookingId}</span><h2>${financeDemo.event}</h2><p>Ridgeview Community Hall · ${financeDemo.eventDate} · event completed</p></div><strong>${moneyExact(checkoutTotal)} paid</strong></div><div class="customer-booking-grid"><div><span>Venue supplier</span><strong>${financeDemo.venueSupplier}</strong><small>Venue rental, venue-owned add-ons, and refundable deposit record</small></div><div><span>Independent vendor</span><strong>${financeDemo.vendorSupplier}</strong><small>Family magic show · separately supplied and invoiced</small></div><div><span>Next step</span><strong>${depositView === "customer_review" ? "Review documented deposit claim" : deposit.label}</strong><small>${deposit.detail}</small></div></div><div class="button-row"><button class="button button-dark" data-route="customer-documents">View booking documents</button><button class="button button-light" data-route="${closeoutFinalized ? "final-statement" : "interim-statement"}">View current statement</button><button class="button button-light" data-route="customer-deposit">View deposit status</button></div></article>${customerDepositCard()}<div class="privacy-boundary"><strong>Customer privacy boundary</strong><span>You can see what you bought, paid, and may receive back. Venue and vendor bank details, platform fees, processing allocations, and private payout statements are intentionally excluded.</span></div></section>`;
+  const reviewTargets = reviewTargetsForBooking();
+  const reviewedCount = reviewTargets.filter(target => organizerReviews[reviewKey(target)]).length;
+  const reviewStatus = reviewedCount === reviewTargets.length ? "Reviews complete" : !reviewWindowOpen() ? "Review window closed" : `${reviewTargets.length - reviewedCount} review${reviewTargets.length - reviewedCount === 1 ? "" : "s"} remaining`;
+  const reviewButtonLabel = reviewedCount === reviewTargets.length ? (reviewWindowOpen() ? "View or edit reviews" : "View submitted reviews") : reviewWindowOpen() ? `Leave reviews · ${reviewedCount}/${reviewTargets.length}` : "View review status";
+  return `<section class="customer-dashboard"><div class="customer-dashboard-head"><div><span class="eyebrow">Customer account</span><h1>My bookings</h1><p>Welcome back, ${role.name}. Your supplier documents, payment receipt, event requirements, and deposit record stay together without exposing seller-private settlement details.</p></div><div class="avatar large">${role.initials}</div></div>${roleContextNotice()}<div class="customer-metrics"><div><span>Recent bookings</span><strong>1 booking</strong><small>${financeDemo.eventDate}</small></div><div><span>Documents</span><strong>${documentCount} available</strong><small>${hasIssuedSupplementalClaim() ? "Includes approved supplemental invoice" : "Invoices, receipt + account statement"}</small></div><div><span>Security deposit</span><strong>${money(financeDemo.deposit)}</strong><small>${deposit.label} · separate record</small></div><div><span>Verified reviews</span><strong>${reviewedCount} of ${reviewTargets.length}</strong><small>${reviewStatus}</small></div></div><article class="customer-booking-card"><div class="customer-booking-title"><div><span class="account-badge">Completed · ${financeDemo.bookingId}</span><h2>${financeDemo.event}</h2><p>Ridgeview Community Hall · ${financeDemo.eventDate} · event completed</p></div><strong>${moneyExact(checkoutTotal)} paid</strong></div><div class="customer-booking-grid"><div><span>Venue supplier</span><strong>${financeDemo.venueSupplier}</strong><small>Venue rental, venue-owned add-ons, and refundable deposit record</small></div><div><span>Independent vendor</span><strong>${financeDemo.vendorSupplier}</strong><small>Family magic show · separately supplied and invoiced</small></div><div><span>Next step</span><strong>${depositView === "customer_review" ? "Review documented deposit claim" : deposit.label}</strong><small>${deposit.detail}</small></div></div><div class="button-row"><button class="button button-dark" data-route="customer-documents">View booking documents</button><button class="button button-light" data-route="${closeoutFinalized ? "final-statement" : "interim-statement"}">View current statement</button><button class="button button-light" data-route="customer-deposit">View deposit status</button></div></article><article class="customer-review-card"><div><span class="account-badge">Verified post-event reviews</span><h2>Help future organizers choose with confidence</h2><p>Review the venue and each fulfilled vendor separately. Your deposit case, private support messages, and supplier settlement details stay outside the public review.</p></div><button class="button button-green" data-route="customer-reviews">${reviewButtonLabel}</button></article>${customerDepositCard()}<div class="privacy-boundary"><strong>Customer privacy boundary</strong><span>You can see what you bought, paid, and may receive back. Venue and vendor bank details, platform fees, processing allocations, and private payout statements are intentionally excluded.</span></div></section>`;
+}
+
+function reviewRatingFieldset(target, existing) {
+  const key = reviewKey(target);
+  const safeId = key.replace(/[^a-z0-9]/gi, "-");
+  return `<fieldset class="star-rating" id="rating-group-${safeId}" aria-describedby="rating-help-${safeId}"><legend>Overall rating <span aria-hidden="true">*</span></legend><p id="rating-help-${safeId}">Choose one rating for this ${target.targetType === "venue" ? "venue" : "vendor service"}.</p><div>${[1, 2, 3, 4, 5].map(value => `<input id="rating-${safeId}-${value}" type="radio" name="rating" value="${value}" ${existing?.rating === value ? "checked" : ""} required><label for="rating-${safeId}-${value}"><span aria-hidden="true">★</span><span class="visually-hidden">${value} out of 5</span><small aria-hidden="true">${value}</small></label>`).join("")}</div></fieldset>`;
+}
+
+function reviewTargetPanel(target) {
+  const key = reviewKey(target);
+  const existing = organizerReviews[key];
+  const canSubmit = canSubmitReviewFor(target);
+  const editing = canSubmit && (!existing || reviewEditingTarget === key);
+  const safeId = key.replace(/[^a-z0-9]/gi, "-");
+  const targetLabel = target.targetType === "venue" ? "Venue" : "Independent vendor";
+  const identifier = target.orderId || completedReviewBooking.bookingId;
+  if (!existing && !canSubmit) {
+    return `<article class="review-target-card"><div class="review-target-head"><div><span class="vendor-category">${targetLabel} · review window closed</span><h2>${escapeHtml(target.name)}</h2><p>${escapeHtml(target.offering)} · ${escapeHtml(identifier)}</p></div><span class="status-pill">Expired</span></div><p class="review-window-closed">The 30-day review window ended on ${completedReviewBooking.reviewDeadline}. No rating was added for this supplier.</p></article>`;
+  }
+  if (!editing) {
+    return `<article class="review-target-card review-published" data-review-record="${safeId}"><div class="review-target-head"><div><span class="vendor-category">${targetLabel} · reviewed</span><h2>${escapeHtml(target.name)}</h2><p>${escapeHtml(target.offering)} · ${escapeHtml(identifier)}</p></div><span class="status-pill confirmed">Published</span></div>${publicReviewCard(existing)}${existing.privateFeedback ? '<p class="review-private-note"><strong>Private feedback saved.</strong> It is visible only to authorized Gather support and is never added to the public review.</p>' : ""}<div class="button-row">${canSubmit ? `<button class="button button-light" type="button" data-review-edit="${escapeHtml(key)}">Edit this review</button>` : ""}${target.targetType === "venue" ? '<button class="button button-light" type="button" data-route="venue">View public venue listing</button>' : '<button class="button button-light" type="button" data-review-vendor-comparison>View vendor comparison</button>'}</div></article>`;
+  }
+  const publicComment = existing?.comment || "";
+  const privateFeedback = existing?.privateFeedback || "";
+  return `<article class="review-target-card"><div class="review-target-head"><div><span class="vendor-category">${targetLabel} · ${existing ? "editing published review" : "eligible to review"}</span><h2>${escapeHtml(target.name)}</h2><p>${escapeHtml(target.offering)} · ${escapeHtml(identifier)} · completed or fulfilled</p></div><span class="verified-review">✓ Verified booking</span></div><form class="review-form" data-review-form data-review-target="${escapeHtml(key)}" novalidate><div class="review-error" id="review-error-${safeId}" role="alert" tabindex="-1" hidden></div>${reviewRatingFieldset(target, existing)}<fieldset class="review-highlight-fieldset"><legend>What stood out? <span>Optional · choose all that apply</span></legend><div class="review-highlight-options">${target.criteria.map((criterion, index) => `<label for="highlight-${safeId}-${index}"><input id="highlight-${safeId}-${index}" type="checkbox" name="highlights" value="${escapeHtml(criterion)}" ${existing?.highlights?.includes(criterion) ? "checked" : ""}> ${escapeHtml(criterion)}</label>`).join("")}</div></fieldset><label class="review-textarea" for="public-comment-${safeId}"><span>Public review <small>Optional · 20–600 characters when provided</small></span><textarea id="public-comment-${safeId}" name="publicComment" rows="5" maxlength="600" data-character-count="public-count-${safeId}" placeholder="Share what future organizers should know about this specific ${target.targetType === "venue" ? "space" : "service"}.">${escapeHtml(publicComment)}</textarea><small id="public-count-${safeId}" class="character-count">${publicComment.length}/600</small></label><label class="review-textarea private" for="private-feedback-${safeId}"><span>Private feedback to Gather <small>Optional · never published</small></span><textarea id="private-feedback-${safeId}" name="privateFeedback" rows="3" maxlength="600" data-character-count="private-count-${safeId}" placeholder="Share a concern that should not appear publicly.">${escapeHtml(privateFeedback)}</textarea><small id="private-count-${safeId}" class="character-count">${privateFeedback.length}/600</small></label><label class="review-guidelines"><input id="guidelines-${safeId}" type="checkbox" name="reviewGuidelines" value="accepted" required> <span>I confirm this is my honest experience with this completed booking and does not include private contact, payment, medical, or dispute evidence.</span></label><div class="review-policy-note"><strong>How publication works</strong><span>This prototype publishes the review immediately for demonstration. The supplier does not approve it. Production would apply content safeguards, reporting, appeal, and moderation without removing a review merely because a supplier disagrees.</span></div><div class="button-row"><button class="button button-green" type="submit">${existing ? "Save review changes" : `Publish ${target.targetType === "venue" ? "venue" : "vendor"} review`}</button>${existing ? `<button class="button button-light" type="button" data-review-cancel="${escapeHtml(key)}">Cancel editing</button>` : ""}</div></form></article>`;
+}
+
+function customerReviewsPage() {
+  const targets = reviewTargetsForBooking();
+  const reviewedCount = targets.filter(target => organizerReviews[reviewKey(target)]).length;
+  const reviewOpen = reviewWindowOpen() && isBookingReviewOwner();
+  return `<section class="review-page"><div class="review-page-wrap"><button class="back-link" type="button" data-route="customer-dashboard">← Back to My bookings</button><header class="review-page-head"><div><span class="eyebrow">Completed booking · ${completedReviewBooking.bookingId}</span><h1>Review your event</h1><p>Rate the venue and every fulfilled vendor separately so future organizers can compare the exact suppliers they may book.</p></div><div class="review-progress" aria-label="${reviewedCount} of ${targets.length} review targets complete"><strong>${reviewedCount}/${targets.length}</strong><span>reviews complete</span></div></header>${roleContextNotice()}<div class="document-notice ${reviewOpen ? "" : "warning"}"><strong>${reviewOpen ? `Eligible until ${completedReviewBooking.reviewDeadline}` : `Review window closed ${completedReviewBooking.reviewDeadline}`}</strong><span>A venue becomes reviewable after the booking is completed; a vendor becomes reviewable after its order is fulfilled. Deposit, payout, invoice, and complaint status do not block an eligible review.</span></div><div class="review-boundaries"><div><strong>Public</strong><span>Your rating, optional comment and highlights, first name with last initial, event type, month/year, and verified-booking badge.</span></div><div><strong>Private</strong><span>Exact booking date and ID, contact details, allergy or medical information, private notes, dispute evidence, and private feedback to authorized Gather support.</span></div><div><strong>One per supplier</strong><span>Editing replaces the existing review and does not add another rating or increase the review count.</span></div></div><div class="review-target-grid">${targets.map(reviewTargetPanel).join("")}</div><aside class="review-support"><div><strong>Need to report a safety, payment, deposit, or service issue?</strong><span>Use a private support case. A public review is not the investigation or dispute channel.</span></div><button class="button button-light" type="button" data-task="Private issue reporting would open here; no complaint details were published.">Report a private issue</button></aside><p class="prototype-note">All bookings, ratings, names, suppliers, and review content shown here are fictional. Review changes live only in this browser memory and reset when the page is refreshed.</p></div></section>`;
 }
 
 function customerDocumentsPage() {
@@ -1081,8 +1194,11 @@ function vendorDashboardPage() {
   const role = activeRole();
   const financeAccess = hasPermission("vendor.finance") || hasPermission("vendor.documents");
   const fulfilmentAccess = hasPermission("vendor.fulfilment");
+  const featuredService = vendorServices.find(item => item.id === "magic-wonderspark");
+  const featuredReviews = vendorReviewSummary(featuredService);
+  const latestReview = publicReviewsFor("vendor-service", featuredService.id)[0];
   const financePanel = financeAccess ? `<h3>Completed-order documents</h3><button class="document-link" type="button" data-route="vendor-invoice"><span><strong>${financeDemo.vendorInvoice}</strong><small>Vendor supplier invoice and payment allocation</small></span><b>→</b></button><button class="document-link" type="button" data-route="vendor-payout"><span><strong>PST-WSE-1033</strong><small>Payout statement + Gather fee invoice</small></span><b>→</b></button>` : `<span class="read-only-label">Fulfilment access</span><h3>Financial details are restricted</h3><p>This role can complete assigned orders but cannot see commission invoices, calculated payouts, bank destinations, or vendor tax details.</p><div class="policy-callout"><strong>Why?</strong><span>Operational staff receive only the information needed to deliver the service.</span></div>`;
-  const content = `<header class="dash-head"><div><span class="eyebrow">Independent vendor portal · ${role.shortRole}</span><h1>Good morning, ${role.name.split(" ")[0]}.</h1><p>${role.organization} · entertainment services</p></div><div class="avatar">${role.initials}</div></header>${roleContextNotice()}<div class="metric-grid"><div class="metric"><span>Upcoming orders</span><strong>4</strong><em>Next 30 days</em></div><div class="metric"><span>Fulfilment due</span><strong>1</strong><em>Confirm after service</em></div><div class="metric"><span>${financeAccess ? "Calculated payout" : "Orders this month"}</span><strong>${financeAccess ? money(financeDemo.vendor.net) : "6"}</strong><em>${financeAccess ? "Transfer not simulated" : "Assigned to team"}</em></div><div class="metric"><span>Customer rating</span><strong>4.9</strong><em>Sample profile</em></div></div><div class="settlement-layout"><section class="dash-card"><div class="card-heading-row"><div><h3>Service orders</h3><p>Vendor fulfilment is tracked separately from venue closeout.</p></div></div><div class="vendor-order"><div><span class="supplier-mark vendor">W</span><div><strong>Family magic show</strong><small>${financeDemo.bookingId} · ${financeDemo.eventDate} · Ridgeview Community Hall</small></div></div><span class="mini-status">Fulfilled</span></div><div class="vendor-order"><div><span class="supplier-mark vendor">W</span><div><strong>Family magic show</strong><small>BKG-1048 · October 17, 2026 · booking confirmed</small></div></div>${fulfilmentAccess ? '<button class="compact-button" data-task="Fulfilment checklist opened">Open checklist</button>' : '<span class="mini-status pending">Upcoming</span>'}</div><div class="policy-callout"><strong>Independent settlement</strong><span>The completed order can become payout-ready even if the venue’s separate security-deposit case is still open. Approval and transfer keep their own statuses.</span></div></section><aside class="dash-card">${financePanel}<button class="button button-light button-wide" type="button" data-route="sign-in">Compare another demo role</button></aside></div>`;
+  const content = `<header class="dash-head"><div><span class="eyebrow">Independent vendor portal · ${role.shortRole}</span><h1>Good morning, ${role.name.split(" ")[0]}.</h1><p>${role.organization} · entertainment services</p></div><div class="avatar">${role.initials}</div></header>${roleContextNotice()}<div class="metric-grid"><div class="metric"><span>Upcoming orders</span><strong>4</strong><em>Next 30 days</em></div><div class="metric"><span>Fulfilment due</span><strong>1</strong><em>Confirm after service</em></div><div class="metric"><span>${financeAccess ? "Calculated payout" : "Orders this month"}</span><strong>${financeAccess ? money(financeDemo.vendor.net) : "6"}</strong><em>${financeAccess ? "Transfer not simulated" : "Assigned to team"}</em></div><div class="metric"><span>Verified rating</span><strong>${featuredReviews.rating?.toFixed(1) || "New"}</strong><em>${featuredReviews.count} completed order${featuredReviews.count === 1 ? "" : "s"}</em></div></div><div class="settlement-layout"><section class="dash-card"><div class="card-heading-row"><div><h3>Service orders</h3><p>Vendor fulfilment is tracked separately from venue closeout.</p></div></div><div class="vendor-order"><div><span class="supplier-mark vendor">W</span><div><strong>Family magic show</strong><small>${financeDemo.bookingId} · ${financeDemo.eventDate} · Ridgeview Community Hall</small></div></div><span class="mini-status">Fulfilled</span></div><div class="vendor-order"><div><span class="supplier-mark vendor">W</span><div><strong>Family magic show</strong><small>BKG-1048 · October 17, 2026 · booking confirmed</small></div></div>${fulfilmentAccess ? '<button class="compact-button" data-task="Fulfilment checklist opened">Open checklist</button>' : '<span class="mini-status pending">Upcoming</span>'}</div><div class="policy-callout"><strong>Independent settlement</strong><span>The completed order can become payout-ready even if the venue’s separate security-deposit case is still open. Approval and transfer keep their own statuses.</span></div>${latestReview ? `<div class="vendor-review-preview"><div><strong>Latest verified organizer review</strong><span>Public feedback is read-only here; suppliers do not approve or remove reviews.</span></div>${publicReviewCard(latestReview, true)}</div>` : ""}</section><aside class="dash-card">${financePanel}<button class="button button-light button-wide" type="button" data-route="sign-in">Compare another demo role</button></aside></div>`;
   return dashboardShell("vendor-dashboard", content);
 }
 
@@ -1095,6 +1211,7 @@ function setActiveRole(roleId) {
   if (!nextRole) return;
   if (activeRoleId !== nextRole.id) {
     confirmedBookingSnapshot = null;
+    reviewEditingTarget = null;
     endSupportSession("Ended automatically when the demo role changed");
   }
   if (nextRole.accountType === "customer" && depositView === "review") seedCustomerClaimScenario();
@@ -1113,6 +1230,7 @@ function signOut() {
   endSupportSession("Ended automatically when the demo session signed out");
   activeRoleId = null;
   confirmedBookingSnapshot = null;
+  reviewEditingTarget = null;
   bookingData.contact = "Alex Morgan";
   bookingData.email = "alex@example.com";
   try { sessionStorage.removeItem("gather-demo-role"); } catch { /* Session persistence is optional in the prototype. */ }
@@ -1181,6 +1299,7 @@ function render(route = location.hash.slice(1) || "home") {
     "fee-settings": feeSettingsPage,
     "vendor-dashboard": vendorDashboardPage,
     "customer-dashboard": customerDashboardPage,
+    "customer-reviews": customerReviewsPage,
     "customer-documents": customerDocumentsPage,
     "customer-deposit": customerDepositPage,
     "platform-dashboard": platformDashboardPage,
@@ -1208,6 +1327,7 @@ function render(route = location.hash.slice(1) || "home") {
     "fee-settings": "Commercial terms",
     "vendor-dashboard": "Vendor portal demo",
     "customer-dashboard": "My bookings",
+    "customer-reviews": "Review your event",
     "customer-documents": "Customer booking documents",
     "customer-deposit": "Customer deposit response",
     "platform-dashboard": "Platform console",
@@ -1254,6 +1374,102 @@ function bindPageEvents() {
   app.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => navigate(el.dataset.route)));
   app.querySelectorAll("[data-demo-role]").forEach(button => button.addEventListener("click", () => setActiveRole(button.dataset.demoRole)));
   app.querySelectorAll("[data-sign-out]").forEach(button => button.addEventListener("click", signOut));
+  app.querySelectorAll("[data-review-edit]").forEach(button => button.addEventListener("click", () => {
+    reviewEditingTarget = button.dataset.reviewEdit;
+    render("customer-reviews");
+    requestAnimationFrame(() => app.querySelector(`[data-review-target="${CSS.escape(reviewEditingTarget)}"] input[name="rating"]:checked`)?.focus({ preventScroll: true }));
+  }));
+  app.querySelectorAll("[data-review-cancel]").forEach(button => button.addEventListener("click", () => {
+    reviewEditingTarget = null;
+    render("customer-reviews");
+    showToast("Review changes were not saved.");
+  }));
+  app.querySelectorAll("[data-review-vendor-comparison]").forEach(button => button.addEventListener("click", () => {
+    bookingStep = 2;
+    navigate("booking");
+  }));
+  app.querySelectorAll("[data-character-count]").forEach(textarea => textarea.addEventListener("input", () => {
+    const counter = app.querySelector(`#${textarea.dataset.characterCount}`);
+    if (counter) counter.textContent = `${textarea.value.length}/600`;
+  }));
+  app.querySelectorAll("[data-review-form]").forEach(form => form.addEventListener("submit", event => {
+    event.preventDefault();
+    const role = activeRole();
+    const target = reviewTargetsForBooking().find(item => reviewKey(item) === form.dataset.reviewTarget);
+    if (!role || !target || !canSubmitReviewFor(target)) {
+      showToast(reviewWindowOpen() ? "Only the booking owner can review that supplier." : `The review window closed on ${completedReviewBooking.reviewDeadline}.`);
+      return;
+    }
+    const formData = new FormData(form);
+    const rating = Number(formData.get("rating"));
+    const comment = String(formData.get("publicComment") || "").trim();
+    const privateFeedback = String(formData.get("privateFeedback") || "").trim();
+    const errors = [];
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) errors.push("Choose an overall rating from 1 to 5.");
+    if (comment && comment.length < 20) errors.push("Write at least 20 characters for a public comment, or leave it blank.");
+    if (comment.length > 600 || privateFeedback.length > 600) errors.push("Keep each feedback field within 600 characters.");
+    if (formData.get("reviewGuidelines") !== "accepted") errors.push("Confirm that the review follows the content and privacy guidelines.");
+    const errorBox = form.querySelector(".review-error");
+    const ratingGroup = form.querySelector(".star-rating");
+    const guidelineInput = form.querySelector('[name="reviewGuidelines"]');
+    const publicCommentInput = form.querySelector('[name="publicComment"]');
+    const privateFeedbackInput = form.querySelector('[name="privateFeedback"]');
+    if (errors.length) {
+      errorBox.hidden = false;
+      errorBox.innerHTML = `<strong>Review not published</strong><ul>${errors.map(error => `<li>${escapeHtml(error)}</li>`).join("")}</ul>`;
+      const errorId = errorBox.id;
+      const ratingInvalid = !Number.isInteger(rating) || rating < 1 || rating > 5;
+      const guidelineInvalid = formData.get("reviewGuidelines") !== "accepted";
+      const commentInvalid = Boolean(comment && comment.length < 20) || comment.length > 600;
+      const privateInvalid = privateFeedback.length > 600;
+      const setAriaInvalid = (input, invalid) => invalid ? input.setAttribute("aria-invalid", "true") : input.removeAttribute("aria-invalid");
+      setAriaInvalid(ratingGroup, ratingInvalid);
+      setAriaInvalid(guidelineInput, guidelineInvalid);
+      setAriaInvalid(publicCommentInput, commentInvalid);
+      setAriaInvalid(privateFeedbackInput, privateInvalid);
+      ratingGroup.setAttribute("aria-describedby", `${ratingGroup.querySelector("p").id}${ratingInvalid ? ` ${errorId}` : ""}`);
+      [guidelineInput, publicCommentInput, privateFeedbackInput].forEach(input => {
+        if (input.getAttribute("aria-invalid") === "true") input.setAttribute("aria-describedby", errorId);
+        else input.removeAttribute("aria-describedby");
+      });
+      errorBox.focus();
+      return;
+    }
+    errorBox.hidden = true;
+    ratingGroup.removeAttribute("aria-invalid");
+    guidelineInput.removeAttribute("aria-invalid");
+    publicCommentInput.removeAttribute("aria-invalid");
+    privateFeedbackInput.removeAttribute("aria-invalid");
+    const key = reviewKey(target);
+    const existing = organizerReviews[key];
+    const nameParts = role.name.trim().split(/\s+/);
+    const reviewer = `${nameParts[0]} ${nameParts.length > 1 ? `${nameParts[nameParts.length - 1][0]}.` : ""}`.trim();
+    organizerReviews[key] = {
+      id: existing?.id || `REV-${completedReviewBooking.bookingId}-${target.orderId || target.subjectId}`,
+      bookingId: completedReviewBooking.bookingId,
+      subjectType: target.subjectType,
+      subjectId: target.subjectId,
+      targetType: target.targetType,
+      supplier: target.supplier,
+      orderId: target.orderId || null,
+      package: target.targetType === "vendor" ? target.offering : "",
+      rating,
+      reviewer,
+      verified: true,
+      eventType: completedReviewBooking.eventType,
+      month: completedReviewBooking.completedMonth,
+      comment,
+      highlights: formData.getAll("highlights").map(String),
+      privateFeedback,
+      status: "published",
+      submittedAt: existing?.submittedAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      edited: Boolean(existing)
+    };
+    reviewEditingTarget = null;
+    render("customer-reviews");
+    showToast(existing ? "Review updated without adding a duplicate rating." : `${target.targetType === "venue" ? "Venue" : "Vendor"} review published in this demo.`);
+  }));
   app.querySelectorAll("[data-space]").forEach(el => el.addEventListener("click", () => {
     const changedVenue = selectedSpaceId !== el.dataset.space;
     const retainedServices = changedVenue && bookingData.vendorServices.length > 0;

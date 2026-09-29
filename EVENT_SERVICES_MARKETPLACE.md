@@ -415,6 +415,21 @@ For catering, collect cuisine, attendee count, menu/package, dietary support, al
 
 Before payment, recheck every selected offering using its complete service interval and current capacity, lead time, service area, venue policy, facility requirements, configuration, inventory, price, tax profile, and cancellation terms. If a selected package becomes invalid, preserve it as **Needs attention**, explain why, and require the organizer to replace or remove it—never silently remove it or reduce the charge. Snapshot the selected package, configuration, price, tax, terms, eligibility evidence, and supplier identity when payment is confirmed.
 
+## Verified post-event reviews
+
+The booking owner may review the venue and every fulfilled independent-vendor order as separate targets after the relevant service is completed. A venue review must describe the venue experience; a vendor review must describe that vendor's package and fulfilment. Do not combine them into one event score that obscures which supplier delivered what.
+
+- Create at most one review record for each `booking + target` pair. The venue booking is one target and each fulfilled vendor order is another. If the organizer edits during the permitted period, replace the existing record and recompute the aggregate; never count the edit as another review.
+- Open eligibility after that target is completed or fulfilled and close it 30 days later. Evaluate each supplier independently rather than waiting for every event-level financial or deposit track to close. Canceled or unfulfilled targets are not reviewable in the pilot.
+- Require an overall 1–5 rating. Public comment and structured positive or improvement highlights are optional. Private feedback is also optional, is visible only to authorized Gather support (not the supplier), and never appears in public review excerpts.
+- Label an eligible review **Verified booking** only because it is linked to a completed Gather transaction. The label does not certify that every statement is objectively proven.
+- In the prototype, submissions and edits are fictional in-memory actions and publish immediately for demonstration. Production must add automated integrity/content checks, reporting, human moderation where needed, policy notices, appeals, and an auditable removal or reinstatement record.
+- The reviewed venue or vendor may report the review and may post one clearly labelled public response. It cannot approve publication, alter the organizer's content, suppress a rating, or obtain removal merely because it disputes the opinion. Remove or restrict content only under the published review and content policies, including rules against fake or duplicate reviews, incentives, extortion, retaliation, unlawful discrimination, harassment, threats, irrelevant content, and exposed personal information.
+- Public identity and context stay minimal: display name or first name plus last initial, **Verified booking**, month/year, general event type, and the applicable venue or service package. Do not expose an exact event date or time, booking/order identifier, contact details, attendee or minor identities, dietary/allergy or health data, private notes, deposit evidence, or payment information.
+- Keep reviews separate from complaints, safety reports, customer support, refunds, chargebacks, and security-deposit claims. Those workflows preserve their own evidence, deadlines, communications, and financial authority. Neither a review nor its removal decides a dispute, and a supplier must never offer or withhold money in exchange for a rating or revised comment.
+
+For future organizers, show venue aggregate rating and verified-review count in search and on the venue page, followed by recent verified excerpts and structured highlights. Show vendor/package aggregates in provider comparison and excerpts from the relevant service type. New venue or service targets use **New / no reviews**. A public excerpt should identify the reviewed target and service context without revealing private booking information, and all sample reviews in the prototype must remain clearly labelled as fictional data.
+
 ## Marketplace safeguards
 
 - Tell customers: **Gather may earn a commission when you book this provider.**

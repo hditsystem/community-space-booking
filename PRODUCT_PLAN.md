@@ -144,7 +144,20 @@ Each generated requirement records its source—law/regulator, venue policy, ven
 - Catering comparison includes cuisine, guest-dependent pricing, minimum order, capacity, dietary support, allergy/cross-contact review capability, serving style, menu scope, service staff or tableware, delivery/setup window, facility requirements, service area, and lead time. “Gluten-aware,” “nut-aware,” or an allergy-review capability is a vendor-reported accommodation—not an allergen-free guarantee—and material allergy requirements require explicit vendor confirmation.
 - Ratings displayed as verified reviews must come from completed platform orders. New providers show **New / no reviews**, not a zero-star score. Sponsored placement must be labelled and must not be blended into organic best-match ranking.
 
-### 3C. Invoices, deposits, fees, and payouts remain distinct
+### 3C. Verified reviews follow completed supplier work
+
+- After the event, the booking owner may review the venue and each fulfilled independent-vendor order separately. Eligibility is evaluated per target, so a completed vendor service can be reviewed even when another supplier or the venue deposit remains open.
+- Allow one review record per `booking + review target`. The venue booking is one target and each fulfilled vendor order is its own target. An organizer edit replaces that record and recalculates the aggregate; it never adds a second rating for the same booking and target.
+- Open the review window when the relevant venue stay or vendor service is completed and close it 30 days later. Canceled, unfulfilled, refunded-before-service, or otherwise ineligible targets do not create a public review in the pilot.
+- Collect a required overall 1–5 rating plus optional public comment and structured highlights. Offer optional private feedback to authorized Gather support; it is not shared with the supplier and is never included in public excerpts or aggregate review content.
+- A **Verified booking** label means the review is linked to an eligible completed Gather transaction. It does not mean Gather independently verified every factual claim in the review.
+- The clickable prototype publishes a submitted review immediately in memory and uses fictional review data. Production requires content and integrity checks, reporting, moderation, an appeal/audit trail, and controls against duplicate, fraudulent, incentivized, extortive, retaliatory, discriminatory, harassing, or privacy-violating content.
+- A venue or vendor may report a review and may receive a clearly labelled public-response capability, but it cannot approve a review before publication, edit the organizer's words, or remove a rating merely because it disagrees with it. Moderation removes or limits content only under the published review and content policies.
+- Public review identity is deliberately minimal: the organizer's chosen display name or first name and last initial, **Verified booking**, month/year, a general event type, and the relevant venue or vendor package. Never publish the booking identifier, exact event date or time, contact details, attendee identities, allergy or health details, private event notes, deposit evidence, or payment information.
+- Reviews do not replace support, safety, complaint, refund, chargeback, or security-deposit-dispute workflows. A review cannot move money, decide a claim, or be traded for a refund or discount; an open complaint or deposit case does not give a supplier veto over a policy-compliant first-hand review.
+- Future organizers see the venue's aggregate rating and verified-review count on discovery and listing views, plus recent verified excerpts and useful structured highlights. Vendor offerings show the supplier/package aggregate and excerpts from the relevant service type. New targets display **New / no reviews**, and fictional prototype ratings remain labelled as sample data.
+
+### 3D. Invoices, deposits, fees, and payouts remain distinct
 
 - Issue the relevant supplier invoice and payment receipt when money is due or collected. Do not wait until after the event to create the first financial document.
 - After event closeout, issue a supplemental supplier invoice or credit note for every valid change and produce one consolidated **Final Booking Statement**. When an approved venue charge is funded from the security deposit, the supplemental venue invoice is still required and the approved deposit amount is recorded as payment against it.
@@ -238,7 +251,7 @@ These are twelve representative roles for workflow and permission testing, not t
 
 ### Representative role responsibilities
 
-- **Organizer / booking owner:** completes Instant Book checkout, receives customer invoices and receipts, manages permitted booking changes, and responds to a documented security-deposit claim. The organizer cannot see private seller payouts or platform controls.
+- **Organizer / booking owner:** completes Instant Book checkout, receives customer invoices and receipts, manages permitted booking changes, responds to a documented security-deposit claim, and reviews each eligible completed venue or vendor service. The organizer cannot see private seller payouts or platform controls.
 - **Owner / account administrator:** controls the operator account, listings, policies, team memberships, and complete venue workflow. This role does not receive Gather-wide administration rights.
 - **Booking manager:** manages calendars, customer communication, booking changes, documents, and access instructions without changing bank, tax, commission, or payout settings.
 - **Operations / inspection staff:** handles access, setup, event completion, inspection notes, evidence, and proposed deposit outcomes. It cannot approve the financial outcome of its own proposal.
@@ -289,6 +302,7 @@ Keep the first build narrow. The pilot should prove that accurate inventory can 
 - Clear pages for payment processing, booking confirmation, payment failure, cancellation, completion, and refunds.
 - Supplier invoice, payment receipt, calendar invitation, booking-management link, reminders, and time-gated access instructions.
 - Post-event Final Booking Statement showing adjustments, credits, payments, refunds, and security-deposit outcome.
+- A 30-day post-event review task with one independent venue review and one review for each fulfilled vendor order, optional private feedback, and clear submitted, edited, and expired states.
 
 ### Venue operations
 
@@ -313,6 +327,7 @@ Keep the first build narrow. The pilot should prove that accurate inventory can 
 
 - Host identity and payout onboarding before a listing becomes bookable.
 - Listing moderation and report-listing flow.
+- Review reporting and moderation with policy-based decisions, supplier responses, immutable booking eligibility, duplicate prevention, and an audit trail for removal or reinstatement.
 - Payment webhook processing, retry queues, refund failures, and dispute evidence.
 - Reconciliation exceptions, seller balances, transfer/payout monitoring, fee-policy audit, and controlled post-event adjustments.
 - Support tooling with time-limited, audited access.
@@ -453,6 +468,7 @@ Supporting metrics:
 - Add-on attachment rate and add-on fulfilment failures.
 - Third-party vendor attachment rate by event type.
 - Vendor quote-to-order conversion, gross merchandise value, average order value, completion, cancellation, refund, and commission revenue.
+- Eligible-review completion, venue and vendor rating distribution, review-edit rate, private-feedback use, supplier-response rate, report rate, and policy-removal rate.
 - Net marketplace contribution after processing, refunds, support, promotions, and any venue-payment subsidy.
 - Required-cost accuracy and requirement completion/rejection rates.
 - Operator-initiated cancellation rate.
